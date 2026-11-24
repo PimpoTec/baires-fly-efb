@@ -1,0 +1,2614 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Baires Fly" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="theme-color" content="#090d14" />
+  <link id="apple-touch-icon-link" rel="apple-touch-icon" href="" />
+  <link id="favicon-link" rel="icon" type="image/png" href="" />
+  <link id="pwa-manifest-link" rel="manifest" href="" />
+  <title>Baires Fly — Pilot EFB</title>
+
+  <!-- Fonts: Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace']
+          },
+          colors: {
+            efb: {
+              bg: '#090d14',
+              panel: '#101622',
+              border: '#1c2536'
+            }
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    html, body {
+      overscroll-behavior-y: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .safe-top {
+      padding-top: env(safe-area-inset-top, 0px);
+    }
+    .safe-bottom {
+      padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+</head>
+<body class="bg-efb-bg text-slate-100 font-sans antialiased min-h-screen flex flex-col pb-24 md:pb-8 selection:bg-orange-500/30 selection:text-orange-200">
+
+  <!-- ==================== HEADER ==================== -->
+  <header class="sticky top-0 z-30 bg-efb-panel/90 backdrop-blur-xl border-b border-efb-border safe-top">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 py-2.5 flex items-center justify-between gap-2">
+      <!-- Brand -->
+      <div class="flex items-center gap-2.5 min-w-0">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center shadow-md shadow-orange-500/20 shrink-0">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+          </svg>
+        </div>
+        <div class="truncate">
+          <div class="flex items-center gap-1.5">
+            <h1 class="text-sm sm:text-base font-bold tracking-tight text-white leading-none">BAIRES FLY</h1>
+            <span class="text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded bg-orange-500/10 text-orange-400 border border-orange-500/25">EFB v4.1</span>
+          </div>
+          <p class="text-[11px] text-slate-400 mt-0.5 truncate">LJ35A Crew Portal • SADF</p>
+        </div>
+      </div>
+
+      <!-- Aircraft Switcher + Install/Backup & UTC -->
+      <div class="flex items-center gap-2 shrink-0">
+        <div id="header-aircraft-switcher" class="flex items-center gap-1 bg-efb-bg p-1 rounded-xl border border-efb-border"></div>
+
+        <button id="header-install-btn" onclick="triggerPwaInstall()" class="hidden min-h-[38px] px-2.5 sm:px-3 py-1.5 rounded-xl bg-orange-500/15 hover:bg-orange-500/25 border border-orange-500/40 text-xs font-bold text-orange-300 transition items-center gap-1.5" title="Instalar App en tu dispositivo">
+          <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+          </svg>
+          <span class="hidden sm:inline">Instalar App</span>
+        </button>
+
+        <button onclick="openBackupModal()" class="relative min-h-[38px] px-2.5 sm:px-3 py-1.5 rounded-xl bg-efb-bg hover:bg-slate-800/80 border border-efb-border text-xs font-medium text-slate-200 transition flex items-center gap-1.5" title="Sincronización GitHub, Respaldo e Instalación">
+          <svg class="w-4 h-4 text-sky-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+          </svg>
+          <span class="hidden sm:inline">Sync / App</span>
+          <span id="backup-pending-dot" class="hidden w-2 h-2 rounded-full bg-amber-400"></span>
+        </button>
+
+        <div class="hidden lg:flex flex-col items-end font-mono text-xs bg-efb-bg px-3 py-1.5 rounded-xl border border-efb-border">
+          <span id="utc-clock" class="text-emerald-400 font-bold">--:--:-- Z</span>
+          <span id="sync-status-label" class="text-[10px] text-slate-500">LOCAL + .JSON</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Minimalist Status Strip -->
+    <div class="bg-efb-bg/70 border-t border-efb-border/80">
+      <div class="max-w-6xl mx-auto px-4 sm:px-6 py-1.5 flex items-center justify-between gap-2 text-[11px] font-mono overflow-x-auto no-scrollbar">
+        <div class="flex items-center gap-x-3.5 whitespace-nowrap">
+          <span class="text-slate-400">POS: <strong id="strip-location" class="text-white">SADF</strong></span>
+          <span class="text-slate-600">•</span>
+          <span class="text-slate-400">AVIÓN: <strong id="strip-aircraft" class="text-orange-400">LV-BPA</strong></span>
+          <span class="text-slate-600">•</span>
+          <span class="text-slate-400">BASE: <strong id="strip-away" class="text-slate-200">En Base</strong></span>
+          <span class="text-slate-600">•</span>
+          <span class="text-slate-400">INSP: <strong id="strip-inspection" class="text-emerald-400">25.0h</strong></span>
+        </div>
+        <div id="strip-return-alert" class="hidden items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/35 text-amber-300 text-[10px] font-semibold whitespace-nowrap">
+          <span>⚠ VOLVER A SADF</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Responsive Navigation: Bottom Dock on Mobile/iPad, Top Tabs on Desktop -->
+    <nav class="fixed bottom-0 inset-x-0 z-40 bg-efb-panel/95 backdrop-blur-xl border-t border-efb-border safe-bottom md:static md:bg-transparent md:backdrop-blur-none md:border-t md:border-efb-border/70">
+      <div class="max-w-6xl mx-auto px-2 sm:px-6 grid grid-cols-5 md:flex md:items-center md:gap-1">
+        <button onclick="setTab('dispatch')" id="tab-dispatch" class="tab-btn min-h-[54px] md:min-h-[42px] px-1 md:px-4 py-1.5 md:py-2.5 text-[11px] md:text-sm font-medium border-t-2 md:border-t-0 md:border-b-2 transition-colors flex flex-col md:flex-row items-center justify-center gap-1 md:gap-2">
+          <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+          <span>Despacho</span>
+        </button>
+        <button onclick="setTab('active')" id="tab-active" class="tab-btn relative min-h-[54px] md:min-h-[42px] px-1 md:px-4 py-1.5 md:py-2.5 text-[11px] md:text-sm font-medium border-t-2 md:border-t-0 md:border-b-2 transition-colors flex flex-col md:flex-row items-center justify-center gap-1 md:gap-2">
+          <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+          <span>Vuelo</span>
+          <span id="active-mission-dot" class="hidden absolute top-2 right-4 md:static w-2 h-2 rounded-full bg-orange-500 animate-pulse"></span>
+        </button>
+        <button onclick="setTab('fleet')" id="tab-fleet" class="tab-btn min-h-[54px] md:min-h-[42px] px-1 md:px-4 py-1.5 md:py-2.5 text-[11px] md:text-sm font-medium border-t-2 md:border-t-0 md:border-b-2 transition-colors flex flex-col md:flex-row items-center justify-center gap-1 md:gap-2">
+          <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
+          <span>Flota</span>
+        </button>
+        <button onclick="setTab('scenery')" id="tab-scenery" class="tab-btn min-h-[54px] md:min-h-[42px] px-1 md:px-4 py-1.5 md:py-2.5 text-[11px] md:text-sm font-medium border-t-2 md:border-t-0 md:border-b-2 transition-colors flex flex-col md:flex-row items-center justify-center gap-1 md:gap-2">
+          <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+          <span class="flex items-center gap-1">Escenarios <span id="scenery-badge" class="hidden sm:inline text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-efb-bg border border-efb-border text-emerald-400">46/46</span></span>
+        </button>
+        <button onclick="setTab('logbook')" id="tab-logbook" class="tab-btn min-h-[54px] md:min-h-[42px] px-1 md:px-4 py-1.5 md:py-2.5 text-[11px] md:text-sm font-medium border-t-2 md:border-t-0 md:border-b-2 transition-colors flex flex-col md:flex-row items-center justify-center gap-1 md:gap-2">
+          <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
+          <span class="flex items-center gap-1">Bitácora <span id="logbook-badge" class="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-efb-bg border border-efb-border text-slate-300">0</span></span>
+        </button>
+      </div>
+    </nav>
+  </header>
+
+  <!-- ==================== MAIN CONTENT ==================== -->
+  <main class="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-5 space-y-5">
+
+    <!-- Standalone Install Banner (Dismissible when in mobile/iPad browser) -->
+    <div id="pwa-install-banner" class="hidden bg-gradient-to-r from-efb-panel to-[#141d2e] border border-orange-500/35 rounded-2xl p-3.5 flex items-center justify-between gap-3">
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="w-9 h-9 rounded-xl bg-orange-500/15 border border-orange-500/35 flex items-center justify-center text-orange-400 shrink-0 font-mono font-bold text-xs">
+          APP
+        </div>
+        <div class="min-w-0">
+          <p class="text-xs font-bold text-white truncate">Instalá Baires Fly en tu iPad o Celular</p>
+          <p id="pwa-install-hint" class="text-[11px] text-slate-400 truncate">Usala a pantalla completa como EFB nativo.</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-1.5 shrink-0">
+        <button onclick="triggerPwaInstall()" class="min-h-[36px] px-3 py-1.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold transition">
+          Cómo Instalar
+        </button>
+        <button onclick="dismissInstallBanner()" class="min-w-[32px] min-h-[36px] rounded-xl text-slate-400 hover:text-white text-xs flex items-center justify-center" title="Ocultar">✕</button>
+      </div>
+    </div>
+
+    <!-- ==================== VIEW 1: DISPATCH ==================== -->
+    <section id="view-dispatch" class="space-y-5">
+      <!-- Active Mission Warning Banner -->
+      <div id="dispatch-active-warning" class="hidden bg-orange-500/10 border border-orange-500/35 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div class="text-xs sm:text-sm">
+          <span class="font-bold text-orange-300 block">Tenés una orden de vuelo activa en curso</span>
+          <span class="text-slate-300">Completá o pausá el tramo actual en la pestaña <strong>Vuelo</strong> antes de iniciar otra rotación.</span>
+        </div>
+        <button onclick="setTab('active')" class="min-h-[40px] px-4 py-2 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold shrink-0 transition">
+          Ir a Vuelo Activo →
+        </button>
+      </div>
+
+      <!-- Dispatch Controls Panel -->
+      <div class="bg-efb-panel border border-efb-border rounded-2xl p-4 sm:p-5 space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h2 class="text-base sm:text-lg font-bold text-white">Despacho de Vuelo</h2>
+            <p class="text-xs text-slate-400 mt-0.5">Elegí tu tiempo disponible (±15 min) para armar tramos directos o escalonados.</p>
+          </div>
+
+          <!-- Long Range USA Toggle -->
+          <label class="flex items-center justify-between sm:justify-start gap-3 cursor-pointer bg-efb-bg px-3.5 py-2.5 rounded-xl border border-efb-border hover:border-slate-600 transition select-none min-h-[44px]">
+            <div>
+              <span class="text-xs font-semibold text-white block leading-tight">Finde / Escalas a EE.UU.</span>
+              <span class="text-[10px] text-slate-400">Habilita KOPF / KMIA / KFLL</span>
+            </div>
+            <div class="relative shrink-0">
+              <input id="toggle-longrange" type="checkbox" class="sr-only peer" onchange="toggleLongRange(this.checked)" />
+              <div class="w-10 h-5 bg-slate-700 rounded-full peer peer-checked:bg-orange-500 transition-colors"></div>
+              <div class="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-5"></div>
+            </div>
+          </label>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-end">
+          <!-- Time Slider & Quick Buttons -->
+          <div class="lg:col-span-6 space-y-2.5">
+            <div class="flex items-center justify-between">
+              <label for="time-slider" class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Tiempo Objetivo (Vuelo + Escalas)</label>
+              <span id="time-display" class="font-mono text-base font-bold text-orange-400">3.0 hs</span>
+            </div>
+            <input id="time-slider" type="range" min="0.75" max="14" step="0.25" value="3" oninput="updateTimeDisplay(this.value)" onchange="generateDispatches()" class="w-full h-2 accent-orange-500 cursor-pointer" />
+            <div class="flex flex-wrap gap-1.5 pt-0.5">
+              <button onclick="setTimePreset(0.75, false)" class="min-h-[36px] px-3 py-1.5 rounded-xl text-xs font-mono bg-efb-bg hover:bg-slate-800 border border-efb-border text-slate-300 transition">45m</button>
+              <button onclick="setTimePreset(1.5, false)" class="min-h-[36px] px-3 py-1.5 rounded-xl text-xs font-mono bg-efb-bg hover:bg-slate-800 border border-efb-border text-slate-300 transition">1.5h</button>
+              <button onclick="setTimePreset(2, false)" class="min-h-[36px] px-3 py-1.5 rounded-xl text-xs font-mono bg-efb-bg hover:bg-slate-800 border border-efb-border text-slate-300 transition">2h</button>
+              <button onclick="setTimePreset(3, false)" class="min-h-[36px] px-3 py-1.5 rounded-xl text-xs font-mono bg-efb-bg hover:bg-slate-800 border border-efb-border text-slate-300 transition">3h</button>
+              <button onclick="setTimePreset(4, false)" class="min-h-[36px] px-3 py-1.5 rounded-xl text-xs font-mono bg-efb-bg hover:bg-slate-800 border border-efb-border text-slate-300 transition">4h</button>
+              <button onclick="setTimePreset(6, false)" class="min-h-[36px] px-3 py-1.5 rounded-xl text-xs font-mono bg-efb-bg hover:bg-slate-800 border border-efb-border text-slate-300 transition">6h</button>
+              <button onclick="setTimePreset(12, true)" class="min-h-[36px] px-3 py-1.5 rounded-xl text-xs font-mono bg-orange-500/15 hover:bg-orange-500/25 border border-orange-500/40 text-orange-300 transition">EE.UU.</button>
+            </div>
+          </div>
+
+          <!-- Mission Preference -->
+          <div class="lg:col-span-3 space-y-1.5">
+            <label for="mission-pref" class="text-[11px] font-semibold uppercase tracking-wider text-slate-400 block">Operación</label>
+            <select id="mission-pref" onchange="setMissionPref(this.value)" class="w-full min-h-[44px] bg-efb-bg border border-efb-border rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:border-orange-500">
+              <option value="auto">Automático (Realista)</option>
+              <option value="base">Forzar Retorno a SADF</option>
+              <option value="ferry">Solo Ferry Vacío</option>
+            </select>
+          </div>
+
+          <!-- Generate Button -->
+          <div class="lg:col-span-3">
+            <button onclick="generateDispatches()" class="w-full min-h-[44px] py-2.5 px-4 rounded-xl bg-orange-500 hover:bg-orange-600 active:scale-[0.99] text-white font-bold text-sm shadow-lg shadow-orange-500/20 transition flex items-center justify-center gap-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+              Generar Órdenes
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Dispatch Cards Grid -->
+      <div id="dispatch-list" class="grid grid-cols-1 lg:grid-cols-2 gap-4"></div>
+    </section>
+
+    <!-- ==================== VIEW 2: ACTIVE FLIGHT ==================== -->
+    <section id="view-active" class="hidden space-y-5">
+      <div id="active-flight-container"></div>
+    </section>
+
+    <!-- ==================== VIEW 3: FLEET & TACTICAL MAP ==================== -->
+    <section id="view-fleet" class="hidden space-y-5">
+      <!-- Tactical Fleet Map -->
+      <div class="bg-efb-panel border border-efb-border rounded-2xl p-4 sm:p-5 space-y-3">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 class="text-base font-bold text-white">Mapa Táctico de Flota</h2>
+            <p class="text-xs text-slate-400">Ubicación física real sin teletransporte. Para cambiar de aeronave debés estar en <strong class="text-white">SADF</strong>.</p>
+          </div>
+          <div class="flex items-center gap-1.5 bg-efb-bg p-1 rounded-xl border border-efb-border">
+            <button onclick="setMapZoom('south')" id="map-zoom-south" class="px-3 py-1 rounded-lg text-xs font-semibold transition">Cono Sur</button>
+            <button onclick="setMapZoom('americas')" id="map-zoom-americas" class="px-3 py-1 rounded-lg text-xs font-semibold transition">América / EE.UU.</button>
+          </div>
+        </div>
+        <div id="fleet-map-container" class="w-full overflow-hidden rounded-xl border border-efb-border bg-[#070b11]"></div>
+      </div>
+
+      <!-- Fleet Cards -->
+      <div id="fleet-cards-container" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+    </section>
+
+    <!-- ==================== VIEW 4: SCENERIES MSFS 2024 ==================== -->
+    <section id="view-scenery" class="hidden space-y-5">
+      <div class="bg-efb-panel border border-efb-border rounded-2xl p-4 sm:p-5 space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h2 class="text-base sm:text-lg font-bold text-white">Escenarios Publicados MSFS 2024</h2>
+            <p class="text-xs text-slate-400 mt-0.5">Activá los aeropuertos que tengas instalados en tu carpeta Community (SceneryAddons / Flightsim.to). <strong class="text-slate-200">SADF</strong> es tu base fija.</p>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <button onclick="bulkToggleSceneries('all_on')" class="min-h-[38px] px-3 py-1.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/35 text-emerald-300 text-xs font-semibold transition">Activar Todos</button>
+            <button onclick="bulkToggleSceneries('regional_only')" class="min-h-[38px] px-3 py-1.5 rounded-xl bg-efb-bg hover:bg-slate-800 border border-efb-border text-slate-300 text-xs font-semibold transition">Solo ARG + UY/CL</button>
+          </div>
+        </div>
+
+        <div class="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
+          <div class="flex flex-wrap gap-1.5" id="scenery-filter-pills"></div>
+          <input id="scenery-search" type="text" oninput="renderSceneryList()" placeholder="Buscar OACI, ciudad o desarrollador..." class="min-h-[40px] bg-efb-bg border border-efb-border rounded-xl px-3.5 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-orange-500 sm:w-64" />
+        </div>
+      </div>
+
+      <div id="scenery-list-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3"></div>
+    </section>
+
+    <!-- ==================== VIEW 5: LOGBOOK ==================== -->
+    <section id="view-logbook" class="hidden space-y-5">
+      <div id="logbook-summary-container" class="grid grid-cols-2 sm:grid-cols-4 gap-3"></div>
+      <div id="logbook-list-container" class="space-y-3"></div>
+    </section>
+
+  </main>
+
+  <!-- ==================== MODAL: CREW BRIEFING & SCHEDULE ==================== -->
+  <div id="schedule-modal" class="hidden fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+    <div class="bg-efb-panel border border-efb-border rounded-2xl max-w-xl w-full p-5 sm:p-6 space-y-4 shadow-2xl my-auto">
+      <div class="flex items-start justify-between gap-3 border-b border-efb-border pb-3.5">
+        <div>
+          <span id="sched-modal-callsign" class="text-[11px] font-mono font-bold text-orange-400">LV-BPA</span>
+          <h3 id="sched-modal-title" class="text-base sm:text-lg font-bold text-white mt-0.5">Programación de Tripulación</h3>
+          <p class="text-xs text-slate-400">Configurá tu horario de presentación en FBO y tiempos de escala.</p>
+        </div>
+        <button onclick="closeScheduleModal()" class="min-w-[36px] min-h-[36px] rounded-xl bg-efb-bg hover:bg-slate-800 border border-efb-border text-slate-400 hover:text-white transition flex items-center justify-center">✕</button>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div>
+          <label for="sched-report-time" class="text-[11px] font-semibold uppercase tracking-wider text-slate-400 block mb-1">Presentación FBO</label>
+          <input id="sched-report-time" type="time" oninput="updateSchedulePreview()" class="w-full min-h-[42px] bg-efb-bg border border-efb-border rounded-xl px-3 py-2 text-sm font-mono text-white focus:outline-none focus:border-orange-500" />
+        </div>
+        <div>
+          <label for="sched-tz" class="text-[11px] font-semibold uppercase tracking-wider text-slate-400 block mb-1">Zona Horaria</label>
+          <select id="sched-tz" onchange="updateSchedulePreview()" class="w-full min-h-[42px] bg-efb-bg border border-efb-border rounded-xl px-3 py-2 text-sm font-mono text-white focus:outline-none focus:border-orange-500">
+            <option value="ART">Local ART (UTC-3)</option>
+            <option value="UTC">UTC / Zulú (Z)</option>
+          </select>
+        </div>
+        <div>
+          <label for="sched-prep-min" class="text-[11px] font-semibold uppercase tracking-wider text-slate-400 block mb-1">Despacho Pre-Vuelo</label>
+          <select id="sched-prep-min" onchange="updateSchedulePreview()" class="w-full min-h-[42px] bg-efb-bg border border-efb-border rounded-xl px-3 py-2 text-sm font-mono text-white focus:outline-none focus:border-orange-500">
+            <option value="20">20 min (Express)</option>
+            <option value="30" selected>30 min (Estándar)</option>
+            <option value="45">45 min (Internacional)</option>
+            <option value="60">60 min (Largo Alcance)</option>
+          </select>
+        </div>
+      </div>
+
+      <div>
+        <label for="sched-notes" class="text-[11px] font-semibold uppercase tracking-wider text-slate-400 block mb-1">Notas Operativas / Handling FBO</label>
+        <input id="sched-notes" type="text" placeholder="Ej: Solicitar GPU y comisariato VIP 20 min antes de ETD..." class="w-full min-h-[40px] bg-efb-bg border border-efb-border rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-orange-500" />
+      </div>
+
+      <!-- Dynamic Timeline Preview -->
+      <div id="sched-timeline-preview" class="bg-efb-bg border border-efb-border rounded-xl p-3.5 space-y-2 text-xs font-mono"></div>
+
+      <div class="flex flex-wrap items-center justify-end gap-2 pt-2 border-t border-efb-border">
+        <button onclick="closeScheduleModal()" class="min-h-[42px] px-4 py-2 rounded-xl bg-efb-bg hover:bg-slate-800 border border-efb-border text-xs font-semibold text-slate-300 transition">Cancelar</button>
+        <button onclick="confirmScheduleAndStart()" class="min-h-[42px] px-5 py-2 rounded-xl bg-orange-500 hover:bg-orange-600 text-xs font-bold text-white shadow-lg shadow-orange-500/20 transition">
+          Confirmar Horario e Iniciar Orden →
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL: BACKUP, GITHUB SYNC & PWA INSTALL ==================== -->
+  <div id="backup-modal" class="hidden fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+    <div class="bg-efb-panel border border-efb-border rounded-2xl max-w-xl w-full p-5 sm:p-6 space-y-5 shadow-2xl my-auto">
+      <div class="flex items-start justify-between gap-3 border-b border-efb-border pb-4">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-sky-500/15 text-sky-300 border border-sky-500/35">PWA v4.1 • LOCAL + GITHUB</span>
+            <span id="backup-cloud-badge" class="text-[10px] font-mono px-2 py-0.5 rounded bg-efb-bg border border-efb-border text-slate-400">Listo</span>
+          </div>
+          <h3 class="text-base sm:text-lg font-bold text-white mt-1">App Instalable, GitHub Sync y Respaldo</h3>
+          <p class="text-xs text-slate-400 mt-0.5">Tus vuelos se guardan automáticamente en este dispositivo y podés sincronizarlos entre PC, iPad y celular.</p>
+        </div>
+        <button onclick="closeBackupModal()" class="min-w-[36px] min-h-[36px] rounded-xl bg-efb-bg hover:bg-slate-800 border border-efb-border text-slate-400 hover:text-white transition flex items-center justify-center">✕</button>
+      </div>
+
+      <div id="backup-snapshot-summary" class="grid grid-cols-3 gap-2.5 bg-efb-bg border border-efb-border rounded-xl p-3 font-mono text-xs"></div>
+
+      <!-- How to Install on iPad / iPhone / Android -->
+      <div class="bg-gradient-to-br from-efb-bg to-[#121a29] border border-orange-500/30 rounded-xl p-3.5 space-y-2 text-xs">
+        <div class="flex items-center justify-between gap-2">
+          <span class="font-bold text-white">📲 Instalar como App en iPad / Celular</span>
+          <button id="modal-native-install-btn" onclick="triggerPwaInstall()" class="hidden px-3 py-1 rounded-lg bg-orange-500 hover:bg-orange-600 text-white text-[11px] font-bold transition">
+            Instalar Ahora
+          </button>
+        </div>
+        <p class="text-[11px] text-slate-300 leading-relaxed">
+          • <strong class="text-orange-300">iPhone / iPad (Safari):</strong> Abrí el link de GitHub Pages, tocá el botón <span class="font-mono text-sky-300">Compartir ⍗</span> (arriba en iPad, abajo en iPhone) y elegí <strong class="text-white">"Agregar a pantalla de inicio"</strong>.<br/>
+          • <strong class="text-orange-300">Android (Chrome):</strong> Tocá <span class="font-mono text-sky-300">⋮</span> y elegí <strong class="text-white">"Instalar aplicación"</strong>. Se instala como app independiente con ícono propio.
+        </p>
+      </div>
+
+      <!-- GitHub Gist Multi-Device Sync (Works on GitHub Pages!) -->
+      <div class="bg-efb-bg border border-efb-border rounded-xl p-3.5 space-y-2.5">
+        <div class="flex items-center justify-between gap-2">
+          <span class="text-xs font-bold text-white">Sincronización Automática vía GitHub Gist</span>
+          <span id="gist-sync-indicator" class="text-[10px] font-mono text-slate-400">No vinculado</span>
+        </div>
+        <p class="text-[11px] text-slate-400 leading-relaxed">
+          Pegá un <strong>GitHub Personal Access Token</strong> (con permiso <span class="font-mono text-slate-200">gist</span>) para sincronizar automáticamente tu flota y bitácora entre la PC, el iPad y el celular. Si dejás el Gist ID vacío, se crea uno nuevo automáticamente.
+        </p>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <input id="gist-token-input" type="password" placeholder="ghp_xxxxxxxxxxxx (Token GitHub)" class="min-h-[40px] bg-efb-panel border border-efb-border rounded-xl px-3 py-1.5 text-xs font-mono text-white placeholder-slate-500 focus:outline-none focus:border-sky-500" />
+          <input id="gist-id-input" type="text" placeholder="Gist ID (opcional si es 1ra vez)" class="min-h-[40px] bg-efb-panel border border-efb-border rounded-xl px-3 py-1.5 text-xs font-mono text-white placeholder-slate-500 focus:outline-none focus:border-sky-500" />
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <button type="button" onclick="connectAndPushGist()" class="min-h-[38px] px-3.5 py-1.5 rounded-xl bg-sky-500/20 hover:bg-sky-500/30 border border-sky-500/40 text-sky-300 text-xs font-bold transition">
+            Vincular y Subir a GitHub
+          </button>
+          <button type="button" onclick="pullFromGist(false)" class="min-h-[38px] px-3.5 py-1.5 rounded-xl bg-efb-panel hover:bg-slate-800 border border-efb-border text-slate-200 text-xs font-semibold transition">
+            Traer Último Estado
+          </button>
+        </div>
+      </div>
+
+      <!-- Portable JSON Export / Import -->
+      <div class="space-y-2.5">
+        <span class="text-[11px] font-semibold uppercase tracking-wider text-slate-400 block">Respaldo Manual Portable (.JSON)</span>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          <button type="button" onclick="exportBackupFile()" class="min-h-[42px] px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold shadow-lg shadow-emerald-500/15 transition flex items-center justify-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+            Descargar .JSON
+          </button>
+          <button type="button" onclick="copyBackupToClipboard()" class="min-h-[42px] px-4 py-2 rounded-xl bg-efb-bg hover:bg-slate-800 border border-efb-border text-slate-200 text-xs font-semibold transition flex items-center justify-center gap-2">
+            <svg class="w-4 h-4 text-orange-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+            Copiar Código JSON
+          </button>
+        </div>
+
+        <div class="bg-efb-bg border border-efb-border rounded-xl p-3 space-y-2">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <span class="text-xs font-semibold text-slate-200">Restaurar desde Archivo o Código</span>
+            <label class="min-h-[34px] px-3 py-1 rounded-lg bg-orange-500/15 hover:bg-orange-500/25 border border-orange-500/40 text-orange-300 text-xs font-bold cursor-pointer transition inline-flex items-center gap-1.5">
+              <span>Subir .JSON</span>
+              <input type="file" accept=".json,application/json" onchange="importBackupFromFile(event)" class="hidden" />
+            </label>
+          </div>
+          <div class="flex gap-2">
+            <input id="backup-paste-input" type="text" placeholder="O pegá acá el código JSON copiado..." class="flex-1 min-h-[38px] bg-efb-panel border border-efb-border rounded-xl px-3 py-1.5 text-xs font-mono text-white placeholder-slate-500 focus:outline-none focus:border-orange-500" />
+            <button type="button" onclick="importBackupFromText()" class="min-h-[38px] px-3.5 py-1.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold transition">
+              Restaurar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL: CUSTOM CONFIRMATION ==================== -->
+  <div id="confirm-modal" class="hidden fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-efb-panel border border-efb-border rounded-2xl max-w-md w-full p-5 space-y-4 shadow-2xl">
+      <h3 id="confirm-modal-title" class="text-base font-bold text-white">Confirmar Acción</h3>
+      <p id="confirm-modal-body" class="text-xs text-slate-300 leading-relaxed"></p>
+      <div class="flex justify-end gap-2 pt-2 border-t border-efb-border">
+        <button onclick="closeConfirmModal()" class="min-h-[40px] px-4 py-2 rounded-xl bg-efb-bg hover:bg-slate-800 border border-efb-border text-xs font-semibold text-slate-300 transition">Cancelar</button>
+        <button id="confirm-modal-ok" class="min-h-[40px] px-4 py-2 rounded-xl bg-orange-500 hover:bg-orange-600 text-xs font-bold text-white transition">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== TOAST ==================== -->
+  <div id="toast-box" class="fixed bottom-20 md:bottom-5 right-4 left-4 sm:left-auto z-50 hidden max-w-sm px-4 py-3 rounded-xl border text-xs font-medium shadow-2xl transition-all"></div>
+
+  <!-- ==================== APPLICATION SCRIPT ==================== -->
+  <script>
+    // =========================================================================
+    // 1. VERIFIED MSFS 2024 AIRPORTS DATABASE (46 AIRPORTS)
+    // =========================================================================
+    const AIRPORTS = {
+      SADF: { icao: 'SADF', iata: 'FDO', name: 'San Fernando Intl', city: 'San Fernando', country: 'ARG', region: 'argentina', lat: -34.4533, lon: -58.5897, elev: 10, rwyFt: 5909, dev: 'Baires Sim / Flightsim.to', sim: 'MSFS 20/24', url: 'https://sceneryaddons.org/?s=SADF' },
+      SABE: { icao: 'SABE', iata: 'AEP', name: 'Aeroparque Jorge Newbery', city: 'Buenos Aires', country: 'ARG', region: 'argentina', lat: -34.5592, lon: -58.4156, elev: 20, rwyFt: 7710, dev: 'Vuelosim / SceneryAddons', sim: 'MSFS 2024', url: 'https://sceneryaddons.org/?s=SABE' },
+      SAEZ: { icao: 'SAEZ', iata: 'EZE', name: 'Ministro Pistarini Intl', city: 'Ezeiza', country: 'ARG', region: 'argentina', lat: -34.8222, lon: -58.5358, elev: 67, rwyFt: 10827, dev: 'TropicalSim / Vuelosim', sim: 'MSFS 2024', url: 'https://sceneryaddons.org/?s=SAEZ' },
+      SAZM: { icao: 'SAZM', iata: 'MDQ', name: 'Astor Piazzolla Intl', city: 'Mar del Plata', country: 'ARG', region: 'argentina', lat: -37.9342, lon: -57.5733, elev: 72, rwyFt: 7218, dev: 'SurSim / Flightsim.to', sim: 'MSFS 20/24', url: 'https://sceneryaddons.org/?s=SAZM' },
+      SACO: { icao: 'SACO', iata: 'COR', name: 'Ing. Aer. Taravella Intl', city: 'Córdoba', country: 'ARG', region: 'argentina', lat: -31.3236, lon: -64.2081, elev: 1604, rwyFt: 10499, dev: 'Vuelosim / SceneryAddons', sim: 'MSFS 2024', url: 'https://sceneryaddons.org/?s=SACO' },
+      SAAR: { icao: 'SAAR', iata: 'ROS', name: 'Islas Malvinas Intl', city: 'Rosario', country: 'ARG', region: 'argentina', lat: -32.9036, lon: -60.7850, elev: 85, rwyFt: 9843, dev: 'Baires Sim / Flightsim.to', sim: 'MSFS 20/24', url: 'https://sceneryaddons.org/?s=SAAR' },
+      SAME: { icao: 'SAME', iata: 'MDZ', name: 'El Plumerillo Intl', city: 'Mendoza', country: 'ARG', region: 'argentina', lat: -32.8317, lon: -68.7928, elev: 2310, rwyFt: 9885, dev: 'Vuelosim / SceneryAddons', sim: 'MSFS 2024', url: 'https://sceneryaddons.org/?s=SAME' },
+      SAZS: { icao: 'SAZS', iata: 'BRC', name: 'Tte. Luis Candelaria Intl', city: 'San Carlos de Bariloche', country: 'ARG', region: 'argentina', lat: -41.1511, lon: -71.1575, elev: 2774, rwyFt: 7218, dev: 'Vuelosim / SceneryAddons', sim: 'MSFS 2024', url: 'https://sceneryaddons.org/?s=SAZS' },
+      SAZY: { icao: 'SAZY', iata: 'CPC', name: 'Aviador Carlos Campos', city: 'San Martín de los Andes', country: 'ARG', region: 'argentina', lat: -40.0753, lon: -71.1372, elev: 2569, rwyFt: 8202, dev: 'SurSim / Flightsim.to', sim: 'MSFS 20/24', url: 'https://sceneryaddons.org/?s=SAZY' },
+      SAZN: { icao: 'SAZN', iata: 'NQN', name: 'Presidente Perón Intl', city: 'Neuquén', country: 'ARG', region: 'argentina', lat: -38.9489, lon: -68.1558, elev: 896, rwyFt: 8432, dev: 'SurSim / SceneryAddons', sim: 'MSFS 20/24', url: 'https://sceneryaddons.org/?s=SAZN' },
+      SASA: { icao: 'SASA', iata: 'SLA', name: 'Martín Miguel de Güemes', city: 'Salta', country: 'ARG', region: 'argentina', lat: -24.8560, lon: -65.4862, elev: 4088, rwyFt: 9843, dev: 'Vuelosim / SceneryAddons', sim: 'MSFS 2024', url: 'https://sceneryaddons.org/?s=SASA' },
+      SANT: { icao: 'SANT', iata: 'TUC', name: 'Tte. Benjamín Matienzo', city: 'Tucumán', country: 'ARG', region: 'argentina', lat: -26.8408, lon: -65.1047, elev: 1493, rwyFt: 9514, dev: 'Vuelosim / Flightsim.to', sim: 'MSFS 20/24', url: 'https://sceneryaddons.org/?s=SANT' },
+      SARI: { icao: 'SARI', iata: 'IGR', name: 'Cataratas del Iguazú Intl', city: 'Puerto Iguazú', country: 'ARG', region: 'argentina', lat: -25.7372, lon: -54.4733, elev: 916, rwyFt: 10827, dev: 'Vuelosim / SceneryAddons', sim: 'MSFS 2024', url: 'https://sceneryaddons.org/?s=SARI' },
+      SAWC: { icao: 'SAWC', iata: 'FTE', name: 'Comandante Armando Tola', city: 'El Calafate', country: 'ARG', region: 'argentina', lat: -50.2803, lon: -72.0531, elev: 669, rwyFt: 8366, dev: 'Vuelosim / SceneryAddons', sim: 'MSFS 2024', url: 'https://sceneryaddons.org/?s=SAWC' },
+      SAWH: { icao: 'SAWH', iata: 'USH', name: 'Malvinas Argentinas Intl', city: 'Ushuaia', country: 'ARG', region: 'argentina', lat: -54.8433, lon: -68.2956, elev: 102, rwyFt: 9186, dev: 'Vuelosim / SceneryAddons', sim: 'MSFS 2024', url: 'https://sceneryaddons.org/?s=SAWH' },
+      SAVC: { icao: 'SAVC', iata: 'CRD', name: 'Gral. Enrique Mosconi', city: 'Comodoro Rivadavia', country: 'ARG', region: 'argentina', lat: -45.7853, lon: -67.4656, elev: 190, rwyFt: 9022, dev: 'SurSim / Flightsim.to', sim: 'MSFS 20/24', url: 'https://sceneryaddons.org/?s=SAVC' },
+      SAZB: { icao: 'SAZB', iata: 'BHI', name: 'Comandante Espora', city: 'Bahía Blanca', country: 'ARG', region: 'argentina', lat: -38.7250, lon: -62.1692, elev: 246, rwyFt: 8583, dev: 'Baires Sim / Flightsim.to', sim: 'MSFS 20/24', url: 'https://sceneryaddons.org/?s=SAZB' },
+      SARE: { icao: 'SARE', iata: 'RES', name: 'Resistencia Intl', city: 'Resistencia', country: 'ARG', region: 'argentina', lat: -27.4500, lon: -59.0561, elev: 174, rwyFt: 9088, dev: 'Flightsim.to Community', sim: 'MSFS 20/24', url: 'https://sceneryaddons.org/?s=SARE' },
+      SARP: { icao: 'SARP', iata: 'PSS', name: 'Libertador Gral. San Martín', city: 'Posadas', country: 'ARG', region: 'argentina', lat: -27.3858, lon: -55.9706, elev: 430, rwyFt: 7218, dev: 'Flightsim.to Community', sim: 'MSFS 20/24', url: 'https://sceneryaddons.org/?s=SARP' },
+      SAWG: { icao: 'SAWG', iata: 'RGL', name: 'Piloto Civil N. Fernández', city: 'Río Gallegos', country: 'ARG', region: 'argentina', lat: -51.6089, lon: -69.3125, elev: 62, rwyFt: 11647, dev: 'SurSim / Flightsim.to', sim: 'MSFS 20/24', url: 'https://sceneryaddons.org/?s=SAWG' },
+
+      SULS: { icao: 'SULS', iata: 'PDP', name: 'Cap. Curbelo Intl', city: 'Punta del Este', country: 'URY', region: 'neighbor', lat: -34.8550, lon: -55.0942, elev: 95, rwyFt: 7001, dev: 'Baires Sim / SceneryAddons', sim: 'MSFS 2024', url: 'https://sceneryaddons.org/?s=SULS' },
+      SUMU: { icao: 'SUMU', iata: 'MVD', name: 'Carrasco Intl', city: 'Montevideo', country: 'URY', region: 'neighbor', lat: -34.8383, lon: -56.0308, elev: 105, rwyFt: 10499, dev: 'LatinVFR / SceneryAddons', sim: 'MSFS 2024', url: 'https://sceneryaddons.org/?s=SUMU' },
+      SUCA: { icao: 'SUCA', iata: 'CYR', name: 'Laguna de los Patos', city: 'Colonia del Sacramento', country: 'URY', region: 'neighbor', lat: -34.4564, lon: -57.7706, elev: 66, rwyFt: 4495, dev: 'Flightsim.to Community', sim: 'MSFS 20/24', url: 'https://sceneryaddons.org/?s=SUCA' },
+      SCEL: { icao: 'SCEL', iata: 'SCL', name: 'Arturo Merino Benítez', city: 'Santiago de Chile', country: 'CHL', region: 'neighbor', lat: -33.3931, lon: -70.7858, elev: 1555, rwyFt: 12467, dev: 'LatinVFR / VirtualDesign3D', sim: 'MSFS 2024', url: 'https://sceneryaddons.org/?s=SCEL' },
+      SCTE: { icao: 'SCTE', iata: 'PMC', name: 'El Tepual Intl', city: 'Puerto Montt', country: 'CHL', region: 'neighbor', lat: -41.4389, lon: -73.0942, elev: 294, rwyFt: 8694, dev: 'VirtualDesign3D', sim: 'MSFS 2024', url: 'https://sceneryaddons.org/?s=SCTE' },
+      SCFA: { icao: 'SCFA', iata: 'ANF', name: 'Andrés Sabella Intl', city: 'Antofagasta', country: 'CHL', region: 'neighbor', lat: -23.4444, lon: -70.4450, elev: 455, rwyFt: 8527, dev: 'VirtualDesign3D', sim: 'MSFS 20/24', url: 'https://sceneryaddons.org/?s=SCFA' },
+      SCCF: { icao: 'SCCF', iata: 'CJC', name: 'El Loa Intl', city: 'Calama', country: 'CHL', region: 'neighbor', lat: -22.4981, lon: -68.9036, elev: 7543, rwyFt: 9974, dev: 'VirtualDesign3D', sim: 'MSFS 20/24', url: 'https://sceneryaddons.org/?s=SCCF' },
+      SCCI: { icao: 'SCCI', iata: 'PUQ', name: 'Pdte. Carlos Ibáñez', city: 'Punta Arenas', country: 'CHL', region: 'neighbor', lat: -53.0025, lon: -70.8547, elev: 139, rwyFt: 9154, dev: 'VirtualDesign3D', sim: 'MSFS 2024', url: 'https://sceneryaddons.org/?s=SCCI' },
+      SBGR: { icao: 'SBGR', iata: 'GRU', name: 'Guarulhos Intl', city: 'São Paulo', country: 'BRA', region: 'neighbor', lat: -23.4356, lon: -46.4731, elev: 2461, rwyFt: 12139, dev: 'Paulo Ricardo / SceneryAddons', sim: 'MSFS 2024', url: 'https://sceneryaddons.org/?s=SBGR' },
+      SBSP: { icao: 'SBSP', iata: 'CGH', name: 'Congonhas', city: 'São Paulo', country: 'BRA', region: 'neighbor', lat: -23.6261, lon: -46.6564, elev: 2631, rwyFt: 6365, dev: 'Paulo Ricardo / SceneryAddons', sim: 'MSFS 2024', url: 'https://sceneryaddons.org/?s=SBSP' },
+      SBRJ: { icao: 'SBRJ', iata: 'SDU', name: 'Santos Dumont', city: 'Río de Janeiro', country: 'BRA', region: 'neighbor', lat: -22.9100, lon: -43.1625, elev: 11, rwyFt: 4341, dev: 'Paulo Ricardo / SceneryAddons', sim: 'MSFS 2024', url: 'https://sceneryaddons.org/?s=SBRJ' },
+      SBGL: { icao: 'SBGL', iata: 'GIG', name: 'Galeão Intl', city: 'Río de Janeiro', country: 'BRA', region: 'neighbor', lat: -22.8100, lon: -43.2506, elev: 28, rwyFt: 13123, dev: 'TropicalSim / SceneryAddons', sim: 'MSFS 2024', url: 'https://sceneryaddons.org/?s=SBGL' },
+      SBFL: { icao: 'SBFL', iata: 'FLN', name: 'Hercílio Luz Intl', city: 'Florianópolis', country: 'BRA', region: 'neighbor', lat: -27.6703, lon: -48.5525, elev: 16, rwyFt: 7874, dev: 'GearDown / SceneryAddons', sim: 'MSFS 2024', url: 'https://sceneryaddons.org/?s=SBFL' },
+      SBCT: { icao: 'SBCT', iata: 'CWB', name: 'Afonso Pena Intl', city: 'Curitiba', country: 'BRA', region: 'neighbor', lat: -25.5317, lon: -49.1758, elev: 2989, rwyFt: 7277, dev: 'GearDown / SceneryAddons', sim: 'MSFS 2024', url: 'https://sceneryaddons.org/?s=SBCT' },
+      SBPA: { icao: 'SBPA', iata: 'POA', name: 'Salgado Filho Intl', city: 'Porto Alegre', country: 'BRA', region: 'neighbor', lat: -29.9944, lon: -51.1714, elev: 11, rwyFt: 10499, dev: 'GearDown / SceneryAddons', sim: 'MSFS 2024', url: 'https://sceneryaddons.org/?s=SBPA' },
+      SGAS: { icao: 'SGAS', iata: 'ASU', name: 'Silvio Pettirossi Intl', city: 'Asunción', country: 'PRY', region: 'neighbor', lat: -25.2400, lon: -57.5192, elev: 292, rwyFt: 11001, dev: 'LatinVFR / Flightsim.to', sim: 'MSFS 20/24', url: 'https://sceneryaddons.org/?s=SGAS' },
+      SGES: { icao: 'SGES', iata: 'AGT', name: 'Guaraní Intl', city: 'Ciudad del Este', country: 'PRY', region: 'neighbor', lat: -25.4544, lon: -54.8436, elev: 846, rwyFt: 11155, dev: 'Flightsim.to Community', sim: 'MSFS 20/24', url: 'https://sceneryaddons.org/?s=SGES' },
+      SLVR: { icao: 'SLVR', iata: 'VVI', name: 'Viru Viru Intl', city: 'Santa Cruz de la Sierra', country: 'BOL', region: 'neighbor', lat: -17.6447, lon: -63.1353, elev: 1224, rwyFt: 11483, dev: 'LatinVFR / SceneryAddons', sim: 'MSFS 2024', url: 'https://sceneryaddons.org/?s=SLVR' },
+
+      SPJC: { icao: 'SPJC', iata: 'LIM', name: 'Jorge Chávez Intl', city: 'Lima', country: 'PER', region: 'usa_corridor', lat: -12.0219, lon: -77.1144, elev: 113, rwyFt: 11506, dev: 'Sierrasim / SceneryAddons', sim: 'MSFS 2024', url: 'https://sceneryaddons.org/?s=SPJC' },
+      SKBO: { icao: 'SKBO', iata: 'BOG', name: 'El Dorado Intl', city: 'Bogotá', country: 'COL', region: 'usa_corridor', lat: 4.7017, lon: -74.1469, elev: 8361, rwyFt: 12467, dev: 'VirtualCol / SceneryAddons', sim: 'MSFS 2024', url: 'https://sceneryaddons.org/?s=SKBO' },
+      SKRG: { icao: 'SKRG', iata: 'MDE', name: 'José María Córdova', city: 'Rionegro / Medellín', country: 'COL', region: 'usa_corridor', lat: 6.1644, lon: -75.4231, elev: 6955, rwyFt: 11483, dev: 'Sierrasim / SceneryAddons', sim: 'MSFS 2024', url: 'https://sceneryaddons.org/?s=SKRG' },
+      MPTO: { icao: 'MPTO', iata: 'PTY', name: 'Tocumen Intl', city: 'Ciudad de Panamá', country: 'PAN', region: 'usa_corridor', lat: 9.0714, lon: -79.3836, elev: 135, rwyFt: 10007, dev: 'LatinVFR / SceneryAddons', sim: 'MSFS 2024', url: 'https://sceneryaddons.org/?s=MPTO' },
+      MKJP: { icao: 'MKJP', iata: 'KIN', name: 'Norman Manley Intl', city: 'Kingston', country: 'JAM', region: 'usa_corridor', lat: 17.9356, lon: -76.7875, elev: 10, rwyFt: 8911, dev: 'SLH Sim Designs', sim: 'MSFS 2024', url: 'https://sceneryaddons.org/?s=MKJP' },
+      KOPF: { icao: 'KOPF', iata: 'OPF', name: 'Miami-Opa Locka Executive', city: 'Miami (Ejecutivo)', country: 'USA', region: 'usa_corridor', lat: 25.9070, lon: -80.2784, elev: 8, rwyFt: 8002, dev: 'LatinVFR / SceneryAddons', sim: 'MSFS 2024', url: 'https://sceneryaddons.org/?s=KOPF' },
+      KMIA: { icao: 'KMIA', iata: 'MIA', name: 'Miami International', city: 'Miami', country: 'USA', region: 'usa_corridor', lat: 25.7959, lon: -80.2870, elev: 8, rwyFt: 13016, dev: 'LatinVFR / BMW969', sim: 'MSFS 2024', url: 'https://sceneryaddons.org/?s=KMIA' },
+      KFLL: { icao: 'KFLL', iata: 'FLL', name: 'Fort Lauderdale-Hollywood', city: 'Fort Lauderdale', country: 'USA', region: 'usa_corridor', lat: 26.0726, lon: -80.1527, elev: 9, rwyFt: 9000, dev: 'LatinVFR / SceneryAddons', sim: 'MSFS 2024', url: 'https://sceneryaddons.org/?s=KFLL' }
+    };
+
+    const TURNAROUND_MIN = 20;
+    const LJ35_MAX_RANGE_NM = 1750;
+    const PHASE_INSPECTION_HOURS = 25.0;
+    const SCHEMA_VERSION = 4;
+    const LOCAL_STORAGE_KEY = 'baires_fly_efb_state_v4';
+    const GIST_CREDS_KEY = 'baires_fly_efb_gist_creds_v1';
+
+    const FBO_DATA = {
+      SADF: { fbo: 'Hangar Baires Fly / Plataforma Norte', atis: '127.40', gnd: '121.80', twr: '118.45', app: '124.90' },
+      SABE: { fbo: 'Plataforma Aviación General / FBO Sur', atis: '127.60', gnd: '121.90', twr: '118.85', app: '124.90' },
+      SAEZ: { fbo: 'FBO Vip / Plataforma Chivatos', atis: '127.80', gnd: '121.75', twr: '118.60', app: '125.90' },
+      SULS: { fbo: 'FBO Laguna del Sauce / Rampa Ejecutiva', atis: '127.20', gnd: '121.90', twr: '118.30', app: '119.50' },
+      SUMU: { fbo: 'FBO Carrasco Ejecutivo', atis: '127.65', gnd: '121.90', twr: '118.10', app: '119.20' },
+      SACO: { fbo: 'FBO Córdoba / Aviación General', atis: '127.70', gnd: '121.90', twr: '118.30', app: '119.10' },
+      SAME: { fbo: 'FBO Mendoza / Rampa Ejecutiva', atis: '127.45', gnd: '121.90', twr: '119.90', app: '124.20' },
+      SAZS: { fbo: 'FBO Bariloche / Plataforma Ejecutiva', atis: '127.55', gnd: '121.90', twr: '119.10', app: '119.10' },
+      SAZY: { fbo: 'Plataforma Chapelco', atis: '118.10', gnd: '118.10', twr: '118.10', app: '125.50' },
+      SASA: { fbo: 'FBO Salta / Plataforma Norte', atis: '127.85', gnd: '121.90', twr: '118.10', app: '118.10' },
+      SARI: { fbo: 'FBO Iguazú / Aviación General', atis: '127.50', gnd: '121.90', twr: '118.10', app: '118.10' },
+      SAWC: { fbo: 'Plataforma Ejecutiva Calafate', atis: '127.65', gnd: '119.45', twr: '119.45', app: '119.45' },
+      SAWH: { fbo: 'Rampa Ejecutiva Canal Beagle', atis: '127.60', gnd: '121.90', twr: '118.10', app: '118.10' },
+      SCEL: { fbo: 'FBO Aerocardal / Rampa Ejecutiva', atis: '132.10', gnd: '122.20', twr: '118.10', app: '119.70' },
+      SBGR: { fbo: 'GATGRU / Rampa Ejecutiva', atis: '127.75', gnd: '121.70', twr: '118.40', app: '129.75' },
+      SBRJ: { fbo: 'Lider Aviation FBO / SDU', atis: '132.65', gnd: '121.70', twr: '118.70', app: '119.35' },
+      SPJC: { fbo: 'Talma / Rampa Ejecutiva Lima', atis: '127.60', gnd: '121.90', twr: '118.10', app: '119.70' },
+      SKBO: { fbo: 'SAI / FBO Aviación Ejecutiva', atis: '127.80', gnd: '121.90', twr: '118.10', app: '119.50' },
+      KOPF: { fbo: 'Signature / Fontainebleau Aviation', atis: '125.90', gnd: '121.90', twr: '120.70', app: '125.50' },
+      KMIA: { fbo: 'Signature Flight Support MIA', atis: '119.15', gnd: '121.80', twr: '118.30', app: '125.50' },
+      KFLL: { fbo: 'Sheltair / Jetscape FBO', atis: '135.00', gnd: '121.40', twr: '119.30', app: '128.60' }
+    };
+
+    const ATS_CORRIDORS = {
+      'SADF-SULS': 'SADF DCT PAPI UA310 BGE DCT SULS',
+      'SULS-SADF': 'SULS DCT BGE UA310 PAPI DCT SADF',
+      'SADF-SACO': 'SADF DCT SNT UL793 COR SACO',
+      'SACO-SADF': 'SACO DCT COR UL793 SNT DCT SADF',
+      'SADF-SAME': 'SADF DCT SNT UW24 DOZ SAME',
+      'SAME-SADF': 'SAME DCT DOZ UW24 SNT DCT SADF',
+      'SADF-SAZS': 'SADF DCT EZE UA570 BAR SAZS',
+      'SAZS-SADF': 'SAZS DCT BAR UA570 EZE DCT SADF',
+      'SADF-SAZY': 'SADF DCT EZE UW20 NEU DCT CHP SAZY',
+      'SAZY-SADF': 'SAZY DCT CHP DCT NEU UW20 EZE DCT SADF',
+      'SADF-SASA': 'SADF DCT SNT UL793 COR UL793 TUC UL793 SAL SASA',
+      'SASA-SADF': 'SASA DCT SAL UL793 TUC UL793 COR UL793 SNT DCT SADF',
+      'SADF-SARI': 'SADF DCT EZE UA310 POS UW64 IGU SARI',
+      'SARI-SADF': 'SARI DCT IGU UW64 POS UA310 EZE DCT SADF',
+      'SADF-SCEL': 'SADF DCT SNT UW24 DOZ UM424 UMONT SCEL',
+      'SCEL-SADF': 'SCEL DCT UMONT UM424 DOZ UW24 SNT DCT SADF',
+      'SADF-SBGR': 'SADF DCT KUKEN UA314 PFD UN741 CWB UM536 RDE SBGR',
+      'SBGR-SADF': 'SBGR DCT RDE UM536 CWB UN741 PFD UA314 KUKEN DCT SADF'
+    };
+
+    // =========================================================================
+    // 2. STATE & PERSISTENCE (LOCALSTORAGE + GITHUB GIST + CLOUD)
+    // =========================================================================
+    function getDefaultEnabledSceneries() {
+      const map = {};
+      Object.keys(AIRPORTS).forEach(icao => {
+        map[icao] = true;
+      });
+      return map;
+    }
+
+    function getDefaultState() {
+      return {
+        schemaVersion: SCHEMA_VERSION,
+        updatedAt: new Date().toISOString(),
+        pilotLocation: 'SADF',
+        activeReg: 'LV-BPA',
+        availableHours: 3.0,
+        longRangeMode: false,
+        missionPref: 'auto',
+        sceneryFilter: 'all',
+        mapZoom: 'south',
+        lastBackupAt: null,
+        hasUnsavedBackupChanges: false,
+        enabledSceneries: getDefaultEnabledSceneries(),
+        fleet: {
+          'LV-BPA': {
+            reg: 'LV-BPA',
+            type: 'Learjet 35A',
+            role: 'Ejecutivo / VIP / Charter / Carga AOG / Ferry',
+            shortRole: 'Ejecutivo VIP',
+            location: 'SADF',
+            totalHours: 0,
+            legsAway: 0,
+            hoursAway: 0,
+            hoursUntilInspection: PHASE_INSPECTION_HOURS,
+            inspectionsCompleted: 0
+          },
+          'LV-IYQ': {
+            reg: 'LV-IYQ',
+            type: 'Learjet 35A',
+            role: 'Sanitario / MEDEVAC / Órganos / Ferry Sanitario',
+            shortRole: 'Sanitario MEDEVAC',
+            location: 'SADF',
+            totalHours: 0,
+            legsAway: 0,
+            hoursAway: 0,
+            hoursUntilInspection: PHASE_INSPECTION_HOURS,
+            inspectionsCompleted: 0
+          }
+        },
+        activeMission: null,
+        logbook: []
+      };
+    }
+
+    let state = getDefaultState();
+    let generatedMissions = [];
+    let pendingScheduleMissionId = null;
+    let modalConfirmCallback = null;
+    let toastTimer = null;
+    let deferredInstallPrompt = null;
+    let gistDebounceTimer = null;
+
+    function migrateState(rawObj) {
+      const def = getDefaultState();
+      if (!rawObj || typeof rawObj !== 'object') return def;
+
+      const source = rawObj.state && typeof rawObj.state === 'object' ? rawObj.state : rawObj;
+      const merged = Object.assign({}, def, source);
+      merged.schemaVersion = SCHEMA_VERSION;
+      merged.enabledSceneries = Object.assign({}, getDefaultEnabledSceneries(), source.enabledSceneries || {});
+      merged.enabledSceneries.SADF = true;
+
+      if (source.fleet) {
+        merged.fleet = {
+          'LV-BPA': Object.assign({}, def.fleet['LV-BPA'], source.fleet['LV-BPA'] || {}),
+          'LV-IYQ': Object.assign({}, def.fleet['LV-IYQ'], source.fleet['LV-IYQ'] || {})
+        };
+        ['LV-BPA', 'LV-IYQ'].forEach(r => {
+          if (typeof merged.fleet[r].hoursUntilInspection !== 'number') {
+            merged.fleet[r].hoursUntilInspection = PHASE_INSPECTION_HOURS;
+          }
+          if (typeof merged.fleet[r].inspectionsCompleted !== 'number') {
+            merged.fleet[r].inspectionsCompleted = 0;
+          }
+          if (!AIRPORTS[merged.fleet[r].location]) {
+            merged.fleet[r].location = 'SADF';
+          }
+        });
+      }
+
+      if (!merged.fleet[merged.activeReg]) {
+        merged.activeReg = 'LV-BPA';
+      }
+      if (!AIRPORTS[merged.pilotLocation]) {
+        merged.pilotLocation = merged.fleet[merged.activeReg].location || 'SADF';
+      }
+      if (!Array.isArray(merged.logbook)) {
+        merged.logbook = [];
+      }
+      return merged;
+    }
+
+    function loadLocalState() {
+      try {
+        const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
+        if (raw) {
+          state = migrateState(JSON.parse(raw));
+        }
+      } catch (e) {}
+    }
+
+    function saveLocalState() {
+      try {
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(state));
+      } catch (e) {}
+    }
+
+    function saveState(skipRemotePush) {
+      state.schemaVersion = SCHEMA_VERSION;
+      state.updatedAt = new Date().toISOString();
+      state.hasUnsavedBackupChanges = true;
+      saveLocalState();
+      updateBackupBadge();
+
+      if (!skipRemotePush) {
+        scheduleGistPush();
+        if (window.__efbSyncBridge && typeof window.__efbSyncBridge.pushState === 'function') {
+          window.__efbSyncBridge.pushState(state);
+        }
+      }
+    }
+
+    function updateBackupBadge() {
+      const dot = document.getElementById('backup-pending-dot');
+      const creds = getGistCreds();
+      if (dot) {
+        const showDot = state.hasUnsavedBackupChanges && state.logbook.length > 0 && !creds.token;
+        dot.classList.toggle('hidden', !showDot);
+      }
+    }
+
+    // =========================================================================
+    // 3. PWA NATIVE ICON, MANIFEST & INSTALL PROMPT
+    // =========================================================================
+    function generatePngAppIconDataUrl() {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = 512;
+        canvas.height = 512;
+        const ctx = canvas.getContext('2d');
+
+        // Background
+        ctx.fillStyle = '#090d14';
+        ctx.fillRect(0, 0, 512, 512);
+
+        // Subtle inner card
+        ctx.fillStyle = '#101622';
+        ctx.beginPath();
+        ctx.roundRect(36, 36, 440, 440, 96);
+        ctx.fill();
+
+        ctx.strokeStyle = '#f97316';
+        ctx.lineWidth = 12;
+        ctx.stroke();
+
+        // Stylized Aircraft Delta Silhouette
+        const grad = ctx.createLinearGradient(140, 120, 372, 370);
+        grad.addColorStop(0, '#fb923c');
+        grad.addColorStop(1, '#ea580c');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.moveTo(256, 110);
+        ctx.lineTo(382, 355);
+        ctx.lineTo(256, 305);
+        ctx.lineTo(130, 355);
+        ctx.closePath();
+        ctx.fill();
+
+        // Subtle Monogram
+        ctx.fillStyle = '#f8fafc';
+        ctx.font = '700 34px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText('BAIRES FLY', 256, 422);
+
+        return canvas.toDataURL('image/png');
+      } catch (e) {
+        return '';
+      }
+    }
+
+    function setupPwaAssets() {
+      const pngIconUrl = generatePngAppIconDataUrl();
+      if (pngIconUrl) {
+        const appleLink = document.getElementById('apple-touch-icon-link');
+        const favLink = document.getElementById('favicon-link');
+        if (appleLink) appleLink.href = pngIconUrl;
+        if (favLink) favLink.href = pngIconUrl;
+      }
+
+      try {
+        const manifest = {
+          name: 'Baires Fly — Pilot EFB',
+          short_name: 'Baires Fly',
+          description: 'Crew Dispatch & Learjet 35A EFB para MSFS 2024',
+          start_url: '.',
+          scope: '.',
+          display: 'standalone',
+          orientation: 'any',
+          background_color: '#090d14',
+          theme_color: '#090d14',
+          icons: pngIconUrl
+            ? [{ src: pngIconUrl, sizes: '512x512', type: 'image/png', purpose: 'any maskable' }]
+            : []
+        };
+        const dataUri = 'data:application/manifest+json;charset=utf-8,' + encodeURIComponent(JSON.stringify(manifest));
+        const link = document.getElementById('pwa-manifest-link');
+        if (link) link.href = dataUri;
+      } catch (e) {}
+
+      // Show mobile/iPad install banner if running inside browser and not standalone
+      const isStandalone = window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
+      const isMobileOrTablet = /iPad|iPhone|iPod|Android/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      const dismissed = sessionStorage.getItem('bf_install_banner_dismissed') === '1';
+
+      if (!isStandalone && isMobileOrTablet && !dismissed) {
+        const banner = document.getElementById('pwa-install-banner');
+        const hint = document.getElementById('pwa-install-hint');
+        const isIos = /iPad|iPhone|iPod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        if (hint && isIos) {
+          hint.textContent = 'En Safari tocá Compartir ⍗ y luego "Agregar a pantalla de inicio".';
+        }
+        if (banner) banner.classList.remove('hidden');
+      }
+    }
+
+    window.addEventListener('beforeinstallprompt', e => {
+      e.preventDefault();
+      deferredInstallPrompt = e;
+      const hdrBtn = document.getElementById('header-install-btn');
+      const modalBtn = document.getElementById('modal-native-install-btn');
+      if (hdrBtn) {
+        hdrBtn.classList.remove('hidden');
+        hdrBtn.classList.add('flex');
+      }
+      if (modalBtn) modalBtn.classList.remove('hidden');
+    });
+
+    async function triggerPwaInstall() {
+      if (deferredInstallPrompt) {
+        deferredInstallPrompt.prompt();
+        const choice = await deferredInstallPrompt.userChoice;
+        if (choice && choice.outcome === 'accepted') {
+          showToast('¡Baires Fly instalada en tu pantalla de inicio!', 'success');
+          dismissInstallBanner();
+        }
+        deferredInstallPrompt = null;
+        return;
+      }
+      openBackupModal();
+      showToast('Seguí los pasos de instalación en pantalla para agregarla al inicio.', 'warn');
+    }
+
+    function dismissInstallBanner() {
+      sessionStorage.setItem('bf_install_banner_dismissed', '1');
+      const banner = document.getElementById('pwa-install-banner');
+      if (banner) banner.classList.add('hidden');
+    }
+
+    // =========================================================================
+    // 4. GITHUB GIST AUTO-SYNC & PORTABLE BACKUP
+    // =========================================================================
+    function getGistCreds() {
+      try {
+        const raw = localStorage.getItem(GIST_CREDS_KEY);
+        if (raw) return JSON.parse(raw);
+      } catch (e) {}
+      return { token: '', gistId: '' };
+    }
+
+    function saveGistCreds(token, gistId) {
+      try {
+        localStorage.setItem(GIST_CREDS_KEY, JSON.stringify({ token: token.trim(), gistId: gistId.trim() }));
+      } catch (e) {}
+    }
+
+    function updateSyncIndicators(label, isConnected) {
+      const syncLabel = document.getElementById('sync-status-label');
+      const cloudBadge = document.getElementById('backup-cloud-badge');
+      const gistInd = document.getElementById('gist-sync-indicator');
+      if (syncLabel) {
+        syncLabel.textContent = label;
+        syncLabel.className = `text-[10px] ${isConnected ? 'text-sky-400' : 'text-slate-500'}`;
+      }
+      if (cloudBadge) {
+        cloudBadge.textContent = label;
+        cloudBadge.className = `text-[10px] font-mono px-2 py-0.5 rounded border ${
+          isConnected ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/35' : 'bg-efb-bg border-efb-border text-slate-400'
+        }`;
+      }
+      if (gistInd) {
+        gistInd.textContent = isConnected ? `Conectado (${label})` : 'No vinculado';
+        gistInd.className = `text-[10px] font-mono ${isConnected ? 'text-emerald-400' : 'text-slate-400'}`;
+      }
+    }
+
+    async function pushToGist(silent) {
+      const creds = getGistCreds();
+      if (!creds.token) return;
+
+      const payload = buildBackupPayload();
+      const body = {
+        description: 'Baires Fly Pilot EFB — Fleet & Logbook Sync',
+        files: {
+          'baires_fly_efb_state.json': {
+            content: JSON.stringify(payload, null, 2)
+          }
+        }
+      };
+
+      try {
+        let res;
+        if (creds.gistId) {
+          res = await fetch(`https://api.github.com/gists/${creds.gistId}`, {
+            method: 'PATCH',
+            headers: {
+              Authorization: `Bearer ${creds.token}`,
+              Accept: 'application/vnd.github+json',
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(body)
+          });
+        } else {
+          body.public = false;
+          res = await fetch('https://api.github.com/gists', {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${creds.token}`,
+              Accept: 'application/vnd.github+json',
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(body)
+          });
+        }
+
+        if (!res.ok) throw new Error('GitHub API error ' + res.status);
+        const data = await res.json();
+        if (data && data.id) {
+          saveGistCreds(creds.token, data.id);
+          const idInput = document.getElementById('gist-id-input');
+          if (idInput) idInput.value = data.id;
+          state.hasUnsavedBackupChanges = false;
+          state.lastBackupAt = new Date().toISOString();
+          saveLocalState();
+          updateBackupBadge();
+          updateSyncIndicators(`GIST ${data.id.slice(0, 6)}`, true);
+          if (!silent) showToast(`Sincronizado con GitHub Gist (${data.id.slice(0, 8)}...).`, 'success');
+        }
+      } catch (err) {
+        if (!silent) showToast('Error conectando con GitHub. Verificá tu Token con permiso "gist".', 'error');
+      }
+    }
+
+    function scheduleGistPush() {
+      const creds = getGistCreds();
+      if (!creds.token) return;
+      clearTimeout(gistDebounceTimer);
+      gistDebounceTimer = setTimeout(() => {
+        pushToGist(true);
+      }, 1500);
+    }
+
+    async function pullFromGist(silent) {
+      const creds = getGistCreds();
+      if (!creds.token || !creds.gistId) {
+        if (!silent) showToast('Ingresá tu Token y Gist ID para descargar el estado.', 'warn');
+        return;
+      }
+
+      try {
+        const res = await fetch(`https://api.github.com/gists/${creds.gistId}`, {
+          headers: {
+            Authorization: `Bearer ${creds.token}`,
+            Accept: 'application/vnd.github+json'
+          }
+        });
+        if (!res.ok) throw new Error('GitHub pull failed');
+        const data = await res.json();
+        const fileObj = data.files && data.files['baires_fly_efb_state.json'];
+        if (fileObj && fileObj.content) {
+          const parsed = JSON.parse(fileObj.content);
+          const remoteState = migrateState(parsed);
+          const localTime = Date.parse(state.updatedAt || 0);
+          const remoteTime = Date.parse(remoteState.updatedAt || 0);
+
+          if (!silent || remoteTime > localTime) {
+            remoteState.hasUnsavedBackupChanges = false;
+            state = remoteState;
+            saveLocalState();
+            syncControlsWithState();
+            renderAll();
+            generateDispatches();
+            if (!silent) showToast(`Estado descargado desde GitHub (${state.logbook.length} vuelos).`, 'success');
+          }
+          updateSyncIndicators(`GIST ${creds.gistId.slice(0, 6)}`, true);
+        }
+      } catch (err) {
+        if (!silent) showToast('No se pudo descargar desde GitHub Gist.', 'error');
+      }
+    }
+
+    async function connectAndPushGist() {
+      const tokenVal = (document.getElementById('gist-token-input')?.value || '').trim();
+      const idVal = (document.getElementById('gist-id-input')?.value || '').trim();
+      if (!tokenVal) {
+        showToast('Pegá primero tu GitHub Personal Access Token.', 'warn');
+        return;
+      }
+      saveGistCreds(tokenVal, idVal);
+      await pushToGist(false);
+    }
+
+    function buildBackupPayload() {
+      return {
+        app: 'BairesFlyEFB',
+        schemaVersion: SCHEMA_VERSION,
+        exportedAt: new Date().toISOString(),
+        state: JSON.parse(JSON.stringify(state))
+      };
+    }
+
+    function openBackupModal() {
+      const bpa = state.fleet['LV-BPA'];
+      const iyq = state.fleet['LV-IYQ'];
+      const totalHrs = (bpa.totalHours + iyq.totalHours).toFixed(1);
+      const enabledCount = Object.keys(AIRPORTS).filter(isSceneryEnabled).length;
+
+      document.getElementById('backup-snapshot-summary').innerHTML = `
+        <div>
+          <span class="text-[10px] text-slate-500 block">FLOTA</span>
+          <span class="text-white font-bold block">BPA: ${bpa.location}</span>
+          <span class="text-slate-300 text-[11px]">IYQ: ${iyq.location}</span>
+        </div>
+        <div>
+          <span class="text-[10px] text-slate-500 block">BITÁCORA</span>
+          <span class="text-orange-400 font-bold block">${state.logbook.length} vuelos</span>
+          <span class="text-slate-300 text-[11px]">${totalHrs} hs totales</span>
+        </div>
+        <div>
+          <span class="text-[10px] text-slate-500 block">ESCENARIOS</span>
+          <span class="text-emerald-400 font-bold block">${enabledCount}/${Object.keys(AIRPORTS).length}</span>
+          <span class="text-slate-400 text-[10px] truncate block">${state.lastBackupAt ? `Sync: ${state.lastBackupAt.slice(11, 16)}Z` : 'Guardado local'}</span>
+        </div>
+      `;
+
+      const creds = getGistCreds();
+      const tokEl = document.getElementById('gist-token-input');
+      const idEl = document.getElementById('gist-id-input');
+      if (tokEl) tokEl.value = creds.token || '';
+      if (idEl) idEl.value = creds.gistId || '';
+
+      document.getElementById('backup-modal').classList.remove('hidden');
+    }
+
+    function closeBackupModal() {
+      document.getElementById('backup-modal').classList.add('hidden');
+    }
+
+    function exportBackupFile() {
+      const payload = buildBackupPayload();
+      const jsonStr = JSON.stringify(payload, null, 2);
+      const blob = new Blob([jsonStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const dateTag = new Date().toISOString().slice(0, 10);
+      a.href = url;
+      a.download = `bairesfly-respaldo-${dateTag}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      state.lastBackupAt = new Date().toISOString();
+      state.hasUnsavedBackupChanges = false;
+      saveLocalState();
+      updateBackupBadge();
+      openBackupModal();
+      showToast('Archivo .JSON descargado correctamente.', 'success');
+    }
+
+    function copyBackupToClipboard() {
+      const payload = buildBackupPayload();
+      const compact = JSON.stringify(payload);
+      const ta = document.createElement('textarea');
+      ta.value = compact;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      try {
+        document.execCommand('copy');
+        state.lastBackupAt = new Date().toISOString();
+        state.hasUnsavedBackupChanges = false;
+        saveLocalState();
+        updateBackupBadge();
+        showToast('Código de respaldo copiado al portapapeles.', 'success');
+      } catch (e) {
+        showToast('No se pudo copiar automáticamente. Usá Descargar .JSON.', 'warn');
+      }
+      document.body.removeChild(ta);
+    }
+
+    function applyImportedJsonString(rawStr) {
+      try {
+        const parsed = JSON.parse(rawStr);
+        if (!parsed || typeof parsed !== 'object' || (!parsed.fleet && !(parsed.state && parsed.state.fleet))) {
+          showToast('El archivo o texto no corresponde a un respaldo válido de Baires Fly.', 'error');
+          return;
+        }
+        const restored = migrateState(parsed);
+        restored.hasUnsavedBackupChanges = false;
+        state = restored;
+
+        syncControlsWithState();
+        saveState();
+        renderAll();
+        generateDispatches();
+        setTab(state.activeMission ? 'active' : 'dispatch');
+        closeBackupModal();
+        showToast(`Respaldo restaurado (${state.logbook.length} vuelos).`, 'success');
+      } catch (err) {
+        showToast('Error al leer el JSON de respaldo.', 'error');
+      }
+    }
+
+    function importBackupFromFile(event) {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = e => {
+        applyImportedJsonString(String(e.target.result || ''));
+        event.target.value = '';
+      };
+      reader.readAsText(file);
+    }
+
+    function importBackupFromText() {
+      const input = document.getElementById('backup-paste-input');
+      const val = (input.value || '').trim();
+      if (!val) {
+        showToast('Pegá el código JSON de respaldo antes de restaurar.', 'warn');
+        return;
+      }
+      applyImportedJsonString(val);
+      input.value = '';
+    }
+
+    // =========================================================================
+    // 5. AVIATION & PERFORMANCE CALCULATORS (LEARJET 35A)
+    // =========================================================================
+    function isSceneryEnabled(icao) {
+      if (icao === 'SADF') return true;
+      return state.enabledSceneries[icao] !== false;
+    }
+
+    function toRad(deg) {
+      return (deg * Math.PI) / 180;
+    }
+
+    function calcDistanceNM(origIcao, destIcao) {
+      const a = AIRPORTS[origIcao];
+      const b = AIRPORTS[destIcao];
+      if (!a || !b) return 100;
+      const R = 3440.065;
+      const dLat = toRad(b.lat - a.lat);
+      const dLon = toRad(b.lon - a.lon);
+      const lat1 = toRad(a.lat);
+      const lat2 = toRad(b.lat);
+      const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
+      const gc = 2 * R * Math.asin(Math.sqrt(h));
+      return Math.max(25, Math.round(gc * 1.08));
+    }
+
+    function calcBearing(origIcao, destIcao) {
+      const a = AIRPORTS[origIcao];
+      const b = AIRPORTS[destIcao];
+      if (!a || !b) return 0;
+      const lat1 = toRad(a.lat);
+      const lat2 = toRad(b.lat);
+      const dLon = toRad(b.lon - a.lon);
+      const y = Math.sin(dLon) * Math.cos(lat2);
+      const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
+      return (Math.round((Math.atan2(y, x) * 180) / Math.PI) + 360) % 360;
+    }
+
+    function calcEETMin(distNM) {
+      const cruiseKt = distNM < 180 ? 375 : 435;
+      return Math.max(20, Math.round((distNM / cruiseKt) * 60 + 14));
+    }
+
+    function calcRVSMFlightLevel(origIcao, destIcao, distNM) {
+      const brg = calcBearing(origIcao, destIcao);
+      const isEast = brg >= 0 && brg < 180;
+      if (distNM < 130) return isEast ? 'FL190' : 'FL200';
+      if (distNM < 320) return isEast ? 'FL290' : 'FL300';
+      if (distNM < 700) return isEast ? 'FL370' : 'FL380';
+      return isEast ? 'FL410' : 'FL430';
+    }
+
+    function calcFuelLbs(eetMin) {
+      const hrs = eetMin / 60;
+      const trip = Math.round(hrs * 1240);
+      const reserve = 1350;
+      return Math.min(6200, Math.max(2200, trip + reserve));
+    }
+
+    function formatMin(totalMin) {
+      const h = Math.floor(totalMin / 60);
+      const m = totalMin % 60;
+      if (h === 0) return `${m}m`;
+      return `${h}h ${String(m).padStart(2, '0')}m`;
+    }
+
+    function buildSuggestedAtsRoute(orig, dest) {
+      const key = `${orig}-${dest}`;
+      if (ATS_CORRIDORS[key]) return ATS_CORRIDORS[key];
+      return `${orig} DCT ${dest}`;
+    }
+
+    function getFboInfo(icao) {
+      return FBO_DATA[icao] || {
+        fbo: `Plataforma Ejecutiva ${AIRPORTS[icao]?.city || icao}`,
+        atis: '127.60',
+        gnd: '121.90',
+        twr: '118.10',
+        app: '119.50'
+      };
+    }
+
+    function calcLJ35Performance(leg) {
+      const origAp = AIRPORTS[leg.orig] || AIRPORTS.SADF;
+      const bow = 10150;
+      const payload = leg.pax === 0 ? 150 : leg.pax * 215 + 120;
+      const zfw = bow + payload;
+      const fuelLbs = leg.fuelLbs || calcFuelLbs(leg.eet);
+      const tow = Math.min(18300, zfw + fuelLbs);
+      const tripFuel = Math.round((leg.eet / 60) * 1240);
+      const elw = Math.max(zfw + 900, tow - tripFuel);
+
+      let rem = fuelLbs;
+      const wingTotal = Math.min(2480, Math.round(rem * 0.44));
+      rem -= wingTotal;
+      const tipTotal = Math.min(2460, Math.round(rem * 0.72));
+      rem -= tipTotal;
+      const fuselage = Math.max(0, Math.min(1290, rem));
+
+      const shortOrHigh = origAp.rwyFt < 6500 || origAp.elev > 3500;
+      const flaps = shortOrHigh ? 'FLAPS 20°' : 'FLAPS 8°';
+      const weightFactor = (tow - 14000) / 4300;
+      const altAdder = Math.round(origAp.elev / 1200);
+      const v1 = Math.round((shortOrHigh ? 114 : 119) + weightFactor * 11 + altAdder);
+      const vr = v1 + 5;
+      const v2 = vr + 8;
+      const vref = Math.round(116 + ((elw - 11500) / 3800) * 14);
+      const vapp = vref + 5;
+
+      return {
+        zfw,
+        tow,
+        elw,
+        mlwWarning: elw > 15300,
+        flaps,
+        v1,
+        vr,
+        v2,
+        vref,
+        vapp,
+        tanks: {
+          wingTotal,
+          wingEach: Math.round(wingTotal / 2),
+          tipTotal,
+          tipEach: Math.round(tipTotal / 2),
+          fuselage
+        }
+      };
+    }
+
+    function buildSimBriefUrl(leg, depTimeUtcStr) {
+      const reg = leg.reg || state.activeReg;
+      const route = encodeURIComponent(buildSuggestedAtsRoute(leg.orig, leg.dest));
+      const flNum = String(leg.fl || 'FL370').replace('FL', '') + '00';
+      const paxCount = leg.pax || 0;
+      const cargoKgs = paxCount === 0 ? 50 : paxCount * 20;
+      let url = `https://dispatch.simbrief.com/options/custom?type=LJ35&orig=${leg.orig}&dest=${leg.dest}&reg=${reg}&fltnum=${reg.replace('-', '')}&route=${route}&fl=${flNum}&pax=${paxCount}&cargo=${cargoKgs}&units=LBS`;
+      if (depTimeUtcStr && /^\d{2}:\d{2}$/.test(depTimeUtcStr)) {
+        const [hh, mm] = depTimeUtcStr.split(':');
+        url += `&deph=${hh}&depm=${mm}`;
+      }
+      return url;
+    }
+
+    // =========================================================================
+    // 6. SMART DISPATCH ENGINE (MULTI-LEG & TARGET TIME ±15 MIN)
+    // =========================================================================
+    function getBadgeStyle(type) {
+      if (type === 'FERRY' || type === 'RETORNO A BASE') return 'bg-slate-700/50 text-slate-300 border-slate-600';
+      if (type === 'MEDEVAC') return 'bg-rose-500/15 text-rose-300 border-rose-500/40';
+      if (type === 'LARGO ALCANCE') return 'bg-sky-500/15 text-sky-300 border-sky-500/40';
+      return 'bg-amber-500/15 text-amber-300 border-amber-500/40';
+    }
+
+    function createLegObj(orig, dest, legType, pax, legBrief) {
+      const dist = calcDistanceNM(orig, dest);
+      const eet = calcEETMin(dist);
+      const fl = calcRVSMFlightLevel(orig, dest, dist);
+      const fuelLbs = calcFuelLbs(eet);
+      const isMedevac = state.activeReg === 'LV-IYQ';
+      let paxLabel = '0 PAX (Vacío / Ferry)';
+      if (pax > 0) {
+        paxLabel = isMedevac
+          ? `${pax} ${pax === 1 ? 'Paciente + Eq. Médico' : 'Camilla + Eq. Médico'}`
+          : `${pax} PAX Ejecutivos`;
+      }
+      return {
+        orig,
+        dest,
+        dist,
+        eet,
+        fl,
+        fuelLbs,
+        legType,
+        pax,
+        paxLabel,
+        legBrief,
+        reg: state.activeReg
+      };
+    }
+
+    function buildMissionFromChain(stops, missionType, narrative, legConfigs) {
+      const legs = [];
+      let totalDist = 0;
+      let totalAirMin = 0;
+      for (let i = 0; i < stops.length - 1; i++) {
+        const cfg = legConfigs[i] || { type: missionType, pax: 4, brief: '' };
+        const leg = createLegObj(stops[i], stops[i + 1], cfg.type, cfg.pax, cfg.brief);
+        legs.push(leg);
+        totalDist += leg.dist;
+        totalAirMin += leg.eet;
+      }
+      const turnaroundTotal = Math.max(0, (legs.length - 1) * TURNAROUND_MIN);
+      const blockMin = totalAirMin + turnaroundTotal;
+      const targetMin = Math.round(state.availableHours * 60);
+      return {
+        id: 'MSN-' + Math.random().toString(36).slice(2, 8).toUpperCase(),
+        reg: state.activeReg,
+        callsign: state.activeReg,
+        missionType,
+        narrative,
+        legs,
+        totalDist,
+        totalAirMin,
+        blockMin,
+        diffMin: blockMin - targetMin
+      };
+    }
+
+    function getCandidatePool() {
+      const isMedevac = state.activeReg === 'LV-IYQ';
+      return Object.keys(AIRPORTS).filter(icao => {
+        if (!isSceneryEnabled(icao)) return false;
+        const ap = AIRPORTS[icao];
+        if (ap.region === 'usa_corridor' && !state.longRangeMode) return false;
+        if (!isMedevac && ap.rwyFt < 4300) return false;
+        return true;
+      });
+    }
+
+    function pickRandom(arr) {
+      return arr[Math.floor(Math.random() * arr.length)];
+    }
+
+    function generateDispatches() {
+      const ac = state.fleet[state.activeReg];
+      const start = ac.location;
+      const isMedevac = state.activeReg === 'LV-IYQ';
+      const targetMin = Math.round(state.availableHours * 60);
+      const pool = getCandidatePool();
+      const missions = [];
+
+      const mustReturnBase =
+        state.missionPref === 'base' ||
+        (start !== 'SADF' && (ac.legsAway >= 3 || ac.hoursAway >= 6 || ac.hoursUntilInspection <= 4.5));
+
+      if ((start === 'SABE' || start === 'SAEZ') && start !== 'SADF') {
+        missions.push(
+          buildMissionFromChain(
+            [start, 'SADF'],
+            'RETORNO A BASE',
+            `Traslado vacío (Ferry) de reposicionamiento desde ${AIRPORTS[start].name} hacia nuestro hangar en San Fernando (SADF).`,
+            [{ type: 'RETORNO A BASE', pax: 0, brief: 'Reposicionamiento corto a hangar Baires Fly en SADF.' }]
+          )
+        );
+      }
+
+      if (state.longRangeMode && targetMin >= 420) {
+        const usaDest = ['KOPF', 'KMIA', 'KFLL'].filter(isSceneryEnabled);
+        if (usaDest.length > 0) {
+          const finalUsa = pickRandom(usaDest);
+          const stop1 = ['SASA', 'SCFA', 'SCCF'].find(isSceneryEnabled) || 'SACO';
+          const stop2 = isSceneryEnabled('SPJC') ? 'SPJC' : 'SLVR';
+          const stop3 = ['SKBO', 'SKRG', 'MPTO'].find(isSceneryEnabled) || 'SKBO';
+
+          if (['KOPF', 'KMIA', 'KFLL'].includes(start)) {
+            missions.push(
+              buildMissionFromChain(
+                [start, stop3, stop2, stop1, 'SADF'],
+                'LARGO ALCANCE',
+                `Regreso internacional de fin de semana desde ${AIRPORTS[start].city} hacia San Fernando con escalas técnicas de combustible.`,
+                [
+                  { type: 'VIP', pax: 5, brief: 'Salida internacional desde FBO en Florida hacia escala norte.' },
+                  { type: 'VIP', pax: 5, brief: 'Escala técnica de combustible y migraciones.' },
+                  { type: 'VIP', pax: 5, brief: 'Cruce andino hacia el Cono Sur con escala técnica.' },
+                  { type: 'RETORNO A BASE', pax: 5, brief: 'Tramo final de arribo a San Fernando (SADF).' }
+                ]
+              )
+            );
+          } else {
+            const chain = start === 'SADF' ? ['SADF', stop1, stop2, stop3, finalUsa] : [start, stop1, stop2, stop3, finalUsa];
+            missions.push(
+              buildMissionFromChain(
+                chain,
+                'LARGO ALCANCE',
+                `Charter ejecutivo internacional de fin de semana hacia ${AIRPORTS[finalUsa].city} (${finalUsa}) con escalas técnicas optimizadas para el alcance del Learjet 35A.`,
+                [
+                  { type: 'VIP', pax: 6, brief: 'Despegue con 6 ejecutivos rumbo a primera escala técnica.' },
+                  { type: 'VIP', pax: 6, brief: 'Reabastecimiento rápido de 20 min y continuación hacia Lima.' },
+                  { type: 'VIP', pax: 6, brief: 'Tramo hacia el Caribe/Colombia previa entrada a EE.UU.' },
+                  { type: 'LARGO ALCANCE', pax: 6, brief: `Arribo final a FBO ejecutivo en ${AIRPORTS[finalUsa].city}.` }
+                ]
+              )
+            );
+          }
+        }
+      }
+
+      if (mustReturnBase && start !== 'SADF') {
+        const directDist = calcDistanceNM(start, 'SADF');
+        if (directDist <= LJ35_MAX_RANGE_NM) {
+          const directMsn = buildMissionFromChain(
+            [start, 'SADF'],
+            'RETORNO A BASE',
+            ac.hoursUntilInspection <= 4.5
+              ? `Alerta de mantenimiento: quedan ${ac.hoursUntilInspection.toFixed(1)} hs de remanente. Retorno obligatorio a hangar SADF.`
+              : `Retorno operativo a base San Fernando (SADF) tras ${ac.legsAway} tramos fuera de base.`,
+            [{ type: 'RETORNO A BASE', pax: isMedevac ? 0 : 2, brief: 'Regreso directo a hangar Baires Fly en SADF.' }]
+          );
+          missions.push(directMsn);
+
+          if (targetMin > directMsn.blockMin + 50) {
+            const mids = pool.filter(c => c !== start && c !== 'SADF' && calcDistanceNM(start, c) <= LJ35_MAX_RANGE_NM && calcDistanceNM(c, 'SADF') <= LJ35_MAX_RANGE_NM);
+            for (let attempt = 0; attempt < 25; attempt++) {
+              const mid = pickRandom(mids);
+              if (!mid) break;
+              const viaMsn = buildMissionFromChain(
+                [start, mid, 'SADF'],
+                'RETORNO A BASE',
+                `Retorno a San Fernando aprovechando una escala comercial en ${AIRPORTS[mid].city} para optimizar el bloque de ${state.availableHours} hs.`,
+                [
+                  { type: isMedevac ? 'MEDEVAC' : 'VIP', pax: isMedevac ? 2 : 4, brief: `Traslado de pasajeros hasta ${AIRPORTS[mid].city}.` },
+                  { type: 'RETORNO A BASE', pax: 0, brief: 'Tramo final vacío (Ferry) de regreso a SADF.' }
+                ]
+              );
+              if (Math.abs(viaMsn.diffMin) <= 25) {
+                missions.push(viaMsn);
+                break;
+              }
+            }
+          }
+        }
+      }
+
+      const validNeighbors = from =>
+        pool.filter(to => to !== from && calcDistanceNM(from, to) <= LJ35_MAX_RANGE_NM);
+
+      const candidates = [];
+      const maxAttempts = 220;
+
+      for (let i = 0; i < maxAttempts; i++) {
+        const legCountRoll = Math.random();
+        let desiredLegs = 2;
+        if (targetMin <= 110) desiredLegs = legCountRoll < 0.55 ? 1 : 2;
+        else if (targetMin <= 210) desiredLegs = legCountRoll < 0.35 ? 1 : legCountRoll < 0.85 ? 2 : 3;
+        else desiredLegs = legCountRoll < 0.2 ? 1 : legCountRoll < 0.55 ? 2 : legCountRoll < 0.85 ? 3 : 4;
+
+        const stops = [start];
+        let valid = true;
+        for (let l = 0; l < desiredLegs; l++) {
+          const curr = stops[stops.length - 1];
+          let nextOptions = validNeighbors(curr).filter(x => x !== stops[stops.length - 2]);
+          if (l === desiredLegs - 1 && start === 'SADF' && desiredLegs >= 2 && Math.random() < 0.7) {
+            if (nextOptions.includes('SADF')) {
+              stops.push('SADF');
+              continue;
+            }
+          }
+          if (nextOptions.length === 0) {
+            valid = false;
+            break;
+          }
+          stops.push(pickRandom(nextOptions));
+        }
+
+        if (!valid) continue;
+
+        const mainType = state.missionPref === 'ferry' ? 'FERRY' : isMedevac ? 'MEDEVAC' : 'VIP';
+        const legConfigs = [];
+        const totalL = stops.length - 1;
+
+        for (let idx = 0; idx < totalL; idx++) {
+          const o = stops[idx];
+          const d = stops[idx + 1];
+          if (state.missionPref === 'ferry') {
+            legConfigs.push({
+              type: d === 'SADF' ? 'RETORNO A BASE' : 'FERRY',
+              pax: 0,
+              brief: `Traslado técnico vacío entre ${AIRPORTS[o].city} y ${AIRPORTS[d].city}.`
+            });
+          } else if (totalL === 1) {
+            const pax = isMedevac ? 2 : Math.floor(Math.random() * 5) + 2;
+            legConfigs.push({
+              type: mainType,
+              pax,
+              brief: isMedevac
+                ? `Vuelo sanitario prioritario trasladando paciente estable y equipo médico a ${AIRPORTS[d].city}.`
+                : `Vuelo ejecutivo directo con ${pax} pasajeros hacia FBO en ${AIRPORTS[d].city}.`
+            });
+          } else if (idx === 0 && totalL >= 2 && Math.random() < 0.55) {
+            legConfigs.push({
+              type: 'FERRY',
+              pax: 0,
+              brief: `Posicionamiento vacío (Ferry) para embarcar pasajeros en ${AIRPORTS[d].city}.`
+            });
+          } else if (idx === totalL - 1 && d === 'SADF' && Math.random() < 0.65) {
+            legConfigs.push({
+              type: 'RETORNO A BASE',
+              pax: 0,
+              brief: `Regreso vacío (Ferry) a base San Fernando (SADF) tras desembarcar pasajeros en ${AIRPORTS[o].city}.`
+            });
+          } else {
+            const pax = isMedevac ? 2 : Math.floor(Math.random() * 5) + 2;
+            legConfigs.push({
+              type: mainType,
+              pax,
+              brief: isMedevac
+                ? `Traslado sanitario con equipo médico a bordo hacia ${AIRPORTS[d].city}.`
+                : `Tramo comercial con ${pax} pasajeros ejecutivos hacia ${AIRPORTS[d].city}.`
+            });
+          }
+        }
+
+        const routeSignature = stops.join('-');
+        if (candidates.some(c => c.sig === routeSignature)) continue;
+
+        const narrative = isMedevac
+          ? `Operación sanitaria coordinada para el ${state.activeReg} (${totalL} ${totalL === 1 ? 'tramo' : 'tramos'}), ajustada a tu ventana operativa de ${state.availableHours} hs.`
+          : totalL === 1
+          ? `Charter ejecutivo directo desde ${AIRPORTS[start].city} hacia ${AIRPORTS[stops[1]].city} con atención en FBO.`
+          : `Rotación ejecutiva de ${totalL} tramos combinando posicionamientos y traslados VIP dentro de tu bloque horario.`;
+
+        const msn = buildMissionFromChain(stops, mainType, narrative, legConfigs);
+        candidates.push({ sig: routeSignature, msn, absDiff: Math.abs(msn.diffMin) });
+      }
+
+      candidates.sort((a, b) => a.absDiff - b.absDiff);
+      for (const item of candidates) {
+        if (missions.length >= 4) break;
+        if (!missions.some(m => m.legs.map(l => l.dest).join('-') === item.msn.legs.map(l => l.dest).join('-'))) {
+          missions.push(item.msn);
+        }
+      }
+
+      generatedMissions = missions;
+      renderDispatchList();
+    }
+
+    // =========================================================================
+    // 7. SCHEDULE MODAL & ACTIVE MISSION WORKFLOW
+    // =========================================================================
+    function acceptMission(missionId) {
+      if (state.activeMission) {
+        showToast('Ya tenés una orden activa en curso.', 'warn');
+        return;
+      }
+      const msn = generatedMissions.find(m => m.id === missionId);
+      if (!msn) return;
+
+      pendingScheduleMissionId = missionId;
+      document.getElementById('sched-modal-callsign').textContent = `${msn.callsign} • ${msn.missionType}`;
+      document.getElementById('sched-modal-title').textContent = `${msn.legs[0].orig} ➔ ${msn.legs[msn.legs.length - 1].dest} (${msn.legs.length} ${msn.legs.length === 1 ? 'tramo' : 'tramos'})`;
+
+      const now = new Date();
+      now.setMinutes(now.getMinutes() + 15);
+      const hh = String(now.getHours()).padStart(2, '0');
+      const mm = String(now.getMinutes()).padStart(2, '0');
+      document.getElementById('sched-report-time').value = `${hh}:${mm}`;
+      document.getElementById('sched-notes').value = '';
+
+      updateSchedulePreview();
+      document.getElementById('schedule-modal').classList.remove('hidden');
+    }
+
+    function closeScheduleModal() {
+      pendingScheduleMissionId = null;
+      document.getElementById('schedule-modal').classList.add('hidden');
+    }
+
+    function addMinutesToHHMM(hhmm, addMin) {
+      const [h, m] = hhmm.split(':').map(Number);
+      const total = (((h * 60 + m + addMin) % 1440) + 1440) % 1440;
+      return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+    }
+
+    function computeScheduleData(msn) {
+      const reportTime = document.getElementById('sched-report-time').value || '12:00';
+      const tz = document.getElementById('sched-tz').value || 'ART';
+      const prepMin = parseInt(document.getElementById('sched-prep-min').value || '30', 10);
+      const notes = (document.getElementById('sched-notes').value || '').trim();
+
+      let cursor = addMinutesToHHMM(reportTime, prepMin);
+      const legTimes = msn.legs.map((leg, i) => {
+        const etd = cursor;
+        const eta = addMinutesToHHMM(etd, leg.eet);
+        const etdUtc = tz === 'ART' ? addMinutesToHHMM(etd, 180) : etd;
+        const etaUtc = tz === 'ART' ? addMinutesToHHMM(eta, 180) : eta;
+        cursor = addMinutesToHHMM(eta, TURNAROUND_MIN);
+        return { legIndex: i, etd, eta, etdUtc, etaUtc, tz };
+      });
+
+      const endDuty = legTimes[legTimes.length - 1].eta;
+      return { reportTime, tz, prepMin, notes, legTimes, endDuty };
+    }
+
+    function updateSchedulePreview() {
+      const msn = generatedMissions.find(m => m.id === pendingScheduleMissionId);
+      if (!msn) return;
+      const sched = computeScheduleData(msn);
+      const suffix = sched.tz === 'UTC' ? 'Z' : ' LT';
+
+      const rows = sched.legTimes
+        .map((lt, idx) => {
+          const leg = msn.legs[idx];
+          return `
+            <div class="flex items-center justify-between gap-2 py-1 border-b border-efb-border/60 last:border-b-0">
+              <span class="text-slate-300">T${idx + 1}: <strong class="text-white">${leg.orig} ➔ ${leg.dest}</strong></span>
+              <span class="text-emerald-400">ETD ${lt.etd}${suffix} • ETA ${lt.eta}${suffix}</span>
+            </div>
+          `;
+        })
+        .join('');
+
+      document.getElementById('sched-timeline-preview').innerHTML = `
+        <div class="flex items-center justify-between text-slate-400 pb-1 border-b border-efb-border">
+          <span>Presentación FBO: <strong class="text-white">${sched.reportTime}${suffix}</strong></span>
+          <span>Fin Servicio: <strong class="text-orange-400">${sched.endDuty}${suffix}</strong></span>
+        </div>
+        ${rows}
+      `;
+    }
+
+    function confirmScheduleAndStart() {
+      const msn = generatedMissions.find(m => m.id === pendingScheduleMissionId);
+      if (!msn) return;
+      const sched = computeScheduleData(msn);
+
+      const cloned = JSON.parse(JSON.stringify(msn));
+      cloned.schedule = sched;
+      cloned.currentLegIndex = 0;
+      cloned.oooi = cloned.legs.map(() => ({ out: '', off: '', on: '', in: '' }));
+
+      state.activeMission = cloned;
+      closeScheduleModal();
+      saveState();
+      renderAll();
+      setTab('active');
+      showToast(`Orden ${cloned.callsign} iniciada. Presentación ${sched.reportTime} ${sched.tz}.`, 'success');
+    }
+
+    function recordOooi(point) {
+      if (!state.activeMission) return;
+      const idx = state.activeMission.currentLegIndex;
+      const now = new Date();
+      const stamp = `${String(now.getUTCHours()).padStart(2, '0')}:${String(now.getUTCMinutes()).padStart(2, '0')}Z`;
+      state.activeMission.oooi[idx][point] = stamp;
+      saveState();
+      renderActiveFlight();
+      showToast(`Registrado ${point.toUpperCase()}: ${stamp}`, 'success');
+    }
+
+    function completeCurrentLeg() {
+      const msn = state.activeMission;
+      if (!msn) return;
+      const idx = msn.currentLegIndex;
+      const leg = msn.legs[idx];
+      const oooi = msn.oooi[idx] || {};
+      const ac = state.fleet[msn.reg];
+
+      const flownHours = +(leg.eet / 60).toFixed(2);
+      ac.location = leg.dest;
+      ac.totalHours = +(ac.totalHours + flownHours).toFixed(2);
+      ac.hoursUntilInspection = Math.max(0, +(ac.hoursUntilInspection - flownHours).toFixed(2));
+
+      if (leg.dest === 'SADF') {
+        ac.legsAway = 0;
+        ac.hoursAway = 0;
+      } else {
+        ac.legsAway += 1;
+        ac.hoursAway = +(ac.hoursAway + flownHours).toFixed(2);
+      }
+
+      state.pilotLocation = leg.dest;
+
+      state.logbook.unshift({
+        id: 'LOG-' + Date.now(),
+        date: new Date().toISOString().slice(0, 10),
+        reg: msn.reg,
+        orig: leg.orig,
+        dest: leg.dest,
+        dist: leg.dist,
+        eet: leg.eet,
+        flownHours,
+        legType: leg.legType,
+        pax: leg.pax,
+        fuelLbs: leg.fuelLbs,
+        oooi
+      });
+
+      if (idx + 1 < msn.legs.length) {
+        msn.currentLegIndex = idx + 1;
+        saveState();
+        renderAll();
+        showToast(`Tramo ${idx + 1} completado en ${leg.dest}. Listo para Tramo ${idx + 2}.`, 'success');
+      } else {
+        state.activeMission = null;
+        saveState();
+        renderAll();
+        generateDispatches();
+        setTab('dispatch');
+        showToast(`Orden completada. Aeronave ${msn.reg} estacionada en ${leg.dest}.`, 'success');
+      }
+    }
+
+    function cancelOrPauseMission() {
+      const msn = state.activeMission;
+      if (!msn) return;
+      const currentAp = msn.legs[msn.currentLegIndex].orig;
+      openConfirmModal(
+        'Pausar / Finalizar Orden Aquí',
+        `El avión ${msn.reg} quedará estacionado físicamente en ${currentAp} (${AIRPORTS[currentAp].city}) y se cancelarán los tramos pendientes. ¿Confirmás?`,
+        () => {
+          state.activeMission = null;
+          saveState();
+          renderAll();
+          generateDispatches();
+          setTab('dispatch');
+          showToast(`Orden finalizada. ${msn.reg} permanece en ${currentAp}.`, 'warn');
+        }
+      );
+    }
+
+    // =========================================================================
+    // 8. FLEET, MAINTENANCE & SCENERY ACTIONS
+    // =========================================================================
+    function selectAircraft(reg) {
+      if (state.activeMission) {
+        showToast('No podés cambiar de aeronave con una orden activa en curso.', 'error');
+        return;
+      }
+      if (state.pilotLocation !== 'SADF') {
+        showToast(`Sin teletransporte: estás en ${state.pilotLocation}. Volvé a SADF para cambiar de avión.`, 'error');
+        return;
+      }
+      if (state.fleet[reg].location !== 'SADF') {
+        showToast(`El ${reg} se encuentra en ${state.fleet[reg].location}, no en SADF.`, 'error');
+        return;
+      }
+      state.activeReg = reg;
+      saveState();
+      renderAll();
+      generateDispatches();
+      showToast(`Aeronave activa: ${reg} (${state.fleet[reg].shortRole}).`, 'success');
+    }
+
+    function performHangarInspection(reg) {
+      const ac = state.fleet[reg];
+      if (!ac || ac.location !== 'SADF') {
+        showToast('La inspección de fase solo se realiza en el hangar de San Fernando (SADF).', 'error');
+        return;
+      }
+      ac.hoursUntilInspection = PHASE_INSPECTION_HOURS;
+      ac.inspectionsCompleted = (ac.inspectionsCompleted || 0) + 1;
+      saveState();
+      renderAll();
+      generateDispatches();
+      showToast(`Inspección de fase completada en SADF para ${reg}. Remanente: 25.0 hs.`, 'success');
+    }
+
+    function toggleScenery(icao) {
+      if (icao === 'SADF') {
+        showToast('SADF es tu base operativa y permanece siempre activa.', 'warn');
+        return;
+      }
+      state.enabledSceneries[icao] = !isSceneryEnabled(icao);
+      saveState();
+      renderSceneryList();
+      updateBadges();
+      generateDispatches();
+    }
+
+    function bulkToggleSceneries(mode) {
+      Object.keys(AIRPORTS).forEach(icao => {
+        if (icao === 'SADF') {
+          state.enabledSceneries[icao] = true;
+        } else if (mode === 'all_on') {
+          state.enabledSceneries[icao] = true;
+        } else if (mode === 'regional_only') {
+          const ap = AIRPORTS[icao];
+          state.enabledSceneries[icao] = ap.country === 'ARG' || ap.country === 'URY' || ap.country === 'CHL';
+        }
+      });
+      saveState();
+      renderSceneryList();
+      updateBadges();
+      generateDispatches();
+      showToast(mode === 'all_on' ? 'Todos los escenarios MSFS 2024 habilitados.' : 'Filtrado a Argentina, Uruguay y Chile.', 'success');
+    }
+
+    function setSceneryFilter(filter) {
+      state.sceneryFilter = filter;
+      renderSceneryList();
+    }
+
+    function setMapZoom(zoom) {
+      state.mapZoom = zoom;
+      renderFleetView();
+    }
+
+    // =========================================================================
+    // 9. RENDER FUNCTIONS
+    // =========================================================================
+    function renderSceneryPill(icao) {
+      const ap = AIRPORTS[icao];
+      if (!ap) return '';
+      return `
+        <div class="flex items-center justify-between gap-2 pt-1 border-t border-efb-border/50">
+          <span class="text-slate-400 truncate">MSFS 2024: <strong class="text-slate-200">${ap.dev}</strong></span>
+          <a href="${ap.url}" target="_blank" rel="noopener noreferrer" class="text-sky-400 hover:text-sky-300 underline shrink-0">SceneryAddons ↗</a>
+        </div>
+      `;
+    }
+
+    function renderHeaderAndStrip() {
+      const atBase = state.pilotLocation === 'SADF';
+      const ac = state.fleet[state.activeReg];
+
+      document.getElementById('header-aircraft-switcher').innerHTML = ['LV-BPA', 'LV-IYQ']
+        .map(reg => {
+          const active = state.activeReg === reg;
+          const locked = !atBase && !active;
+          return `
+            <button onclick="selectAircraft('${reg}')" class="min-h-[32px] px-2.5 py-1 rounded-lg font-mono text-xs font-bold transition flex items-center gap-1 ${
+              active
+                ? 'bg-orange-500 text-white shadow'
+                : locked
+                ? 'text-slate-500 cursor-not-allowed'
+                : 'text-slate-300 hover:bg-slate-800'
+            }" title="${locked ? 'Volvé a SADF para cambiar de avión' : state.fleet[reg].shortRole}">
+              <span>${reg}</span>
+              ${locked ? '<span class="text-[10px]">🔒</span>' : ''}
+            </button>
+          `;
+        })
+        .join('');
+
+      document.getElementById('strip-location').textContent = `${state.pilotLocation} (${AIRPORTS[state.pilotLocation]?.city || ''})`;
+      document.getElementById('strip-aircraft').textContent = `${state.activeReg} • ${ac.shortRole}`;
+      document.getElementById('strip-away').textContent =
+        ac.location === 'SADF' ? 'En Base (SADF)' : `${ac.legsAway}T / ${ac.hoursAway.toFixed(1)}h fuera`;
+
+      const inspEl = document.getElementById('strip-inspection');
+      inspEl.textContent = `${ac.hoursUntilInspection.toFixed(1)}h`;
+      inspEl.className =
+        ac.hoursUntilInspection <= 4.5
+          ? 'text-rose-400 font-bold'
+          : ac.hoursUntilInspection <= 10
+          ? 'text-amber-300 font-bold'
+          : 'text-emerald-400';
+
+      const returnAlert = document.getElementById('strip-return-alert');
+      const showReturn = ac.location !== 'SADF' && (ac.legsAway >= 3 || ac.hoursAway >= 6 || ac.hoursUntilInspection <= 4.5);
+      returnAlert.classList.toggle('hidden', !showReturn);
+      returnAlert.classList.toggle('flex', showReturn);
+    }
+
+    function updateBadges() {
+      const enabledCount = Object.keys(AIRPORTS).filter(isSceneryEnabled).length;
+      const totalCount = Object.keys(AIRPORTS).length;
+      const scBadge = document.getElementById('scenery-badge');
+      if (scBadge) scBadge.textContent = `${enabledCount}/${totalCount}`;
+
+      const logBadge = document.getElementById('logbook-badge');
+      if (logBadge) logBadge.textContent = String(state.logbook.length);
+
+      const dot = document.getElementById('active-mission-dot');
+      if (dot) dot.classList.toggle('hidden', !state.activeMission);
+
+      const warn = document.getElementById('dispatch-active-warning');
+      if (warn) warn.classList.toggle('hidden', !state.activeMission);
+    }
+
+    function renderDispatchList() {
+      const container = document.getElementById('dispatch-list');
+      if (!generatedMissions.length) {
+        container.innerHTML = `
+          <div class="col-span-full bg-efb-panel border border-efb-border rounded-2xl p-8 text-center space-y-2">
+            <p class="text-sm font-bold text-white">No hay rutas disponibles con los filtros actuales</p>
+            <p class="text-xs text-slate-400">Probá activar más escenarios MSFS 2024 o ajustar el tiempo objetivo.</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = generatedMissions
+        .map(m => {
+          const badgeCls = getBadgeStyle(m.missionType);
+          const routeStops = [m.legs[0].orig, ...m.legs.map(l => l.dest)];
+          const routeTitle = routeStops.join(' ➔ ');
+
+          const legsHtml = m.legs
+            .map((leg, i) => {
+              const perf = calcLJ35Performance(leg);
+              const atsRoute = buildSuggestedAtsRoute(leg.orig, leg.dest);
+              return `
+                <div class="bg-efb-bg border border-efb-border/80 rounded-xl p-3 space-y-2">
+                  <div class="flex flex-wrap items-center justify-between gap-2 font-mono text-xs">
+                    <div class="flex items-center gap-1.5 flex-wrap">
+                      <span class="px-1.5 py-0.5 rounded bg-efb-panel text-slate-400 text-[10px]">T${i + 1}</span>
+                      <span class="text-[10px] font-bold px-1.5 py-0.5 rounded border ${getBadgeStyle(leg.legType)}">${leg.legType}</span>
+                      <span class="text-white font-bold">${leg.orig}</span>
+                      <span class="text-orange-500">➔</span>
+                      <span class="text-white font-bold">${leg.dest}</span>
+                      <span class="text-slate-400">(${AIRPORTS[leg.dest].city})</span>
+                    </div>
+                    <span class="text-[11px] font-semibold ${leg.pax === 0 ? 'text-slate-400' : 'text-amber-300'}">${leg.paxLabel}</span>
+                  </div>
+                  ${leg.legBrief ? `<p class="text-[11px] text-slate-400 leading-snug">${leg.legBrief}</p>` : ''}
+                  <div class="grid grid-cols-4 gap-2 font-mono text-[11px] text-slate-300 pt-1.5 border-t border-efb-border/60">
+                    <div><span class="text-slate-500 block text-[9px]">DIST</span>${leg.dist} NM</div>
+                    <div><span class="text-slate-500 block text-[9px]">EET</span>${formatMin(leg.eet)}</div>
+                    <div><span class="text-slate-500 block text-[9px]">NIVEL</span><span class="text-emerald-400">${leg.fl}</span></div>
+                    <div><span class="text-slate-500 block text-[9px]">FUEL</span>${leg.fuelLbs} lb</div>
+                  </div>
+                  <details class="group pt-1 border-t border-efb-border/50">
+                    <summary class="list-none cursor-pointer flex items-center justify-between text-[11px] font-mono text-slate-400 hover:text-slate-200 select-none py-0.5">
+                      <span>Tanques, V-Speeds y Escenario MSFS 2024</span>
+                      <span class="text-orange-400 group-open:rotate-180 transition-transform">▾</span>
+                    </summary>
+                    <div class="pt-2 space-y-2 font-mono text-[10px] text-slate-300">
+                      <div><span class="text-slate-500">TANQUES LJ35:</span> Wing ${perf.tanks.wingTotal} lb • Tip ${perf.tanks.tipTotal} lb • Fuselage ${perf.tanks.fuselage} lb</div>
+                      <div><span class="text-slate-500">${perf.flaps}:</span> V1 ${perf.v1} / VR ${perf.vr} / V2 ${perf.v2} kt • VREF ${perf.vref} kt</div>
+                      <div class="text-slate-400 truncate" title="${atsRoute}"><span class="text-slate-500">ATS:</span> ${atsRoute}</div>
+                      ${renderSceneryPill(leg.dest)}
+                    </div>
+                  </details>
+                </div>
+                ${
+                  i < m.legs.length - 1
+                    ? `<div class="flex items-center justify-center gap-2 text-[10px] font-mono text-amber-400/90 py-0.5">
+                        <span class="h-px w-6 bg-amber-500/30"></span>
+                        <span>⏱ ESCALA (${leg.dest}): ${TURNAROUND_MIN} MIN</span>
+                        <span class="h-px w-6 bg-amber-500/30"></span>
+                      </div>`
+                    : ''
+                }
+              `;
+            })
+            .join('');
+
+          return `
+            <article class="bg-efb-panel border border-efb-border hover:border-slate-600 rounded-2xl p-4 sm:p-5 flex flex-col justify-between gap-4 transition">
+              <div class="space-y-3">
+                <div class="flex items-start justify-between gap-2">
+                  <div class="min-w-0">
+                    <div class="flex items-center gap-2 flex-wrap">
+                      <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded border ${badgeCls}">${m.missionType}</span>
+                      <span class="font-mono text-xs text-slate-400">${m.callsign} • ${m.reg}</span>
+                    </div>
+                    <h3 class="font-mono text-sm sm:text-base font-bold text-white mt-1.5 break-words">${routeTitle}</h3>
+                  </div>
+                  <div class="text-right font-mono shrink-0">
+                    <span class="text-sm font-bold text-orange-400 block">${formatMin(m.blockMin)}</span>
+                    <span class="text-[10px] text-slate-400 block">${m.totalDist} NM • ${m.legs.length}T</span>
+                    <span class="inline-block mt-1 text-[10px] px-1.5 py-0.5 rounded border ${
+                      Math.abs(m.diffMin) <= 15
+                        ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/35'
+                        : 'bg-amber-500/15 text-amber-300 border-amber-500/35'
+                    }">
+                      ${m.diffMin === 0 ? 'Exacto' : `${m.diffMin > 0 ? '+' : ''}${m.diffMin}m`}
+                    </span>
+                  </div>
+                </div>
+
+                <p class="text-xs text-slate-300 leading-relaxed bg-efb-bg/60 border border-efb-border/60 rounded-xl p-3">${m.narrative}</p>
+
+                <div class="space-y-2">${legsHtml}</div>
+              </div>
+
+              <div class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-efb-border">
+                <a href="${buildSimBriefUrl(m.legs[0])}" target="_blank" rel="noopener noreferrer" class="min-h-[42px] px-3.5 py-2 rounded-xl bg-efb-bg hover:bg-slate-800 border border-efb-border text-xs font-semibold text-sky-300 transition inline-flex items-center">
+                  SimBrief ↗
+                </a>
+                <button onclick="acceptMission('${m.id}')" ${state.activeMission ? 'disabled' : ''} class="min-h-[42px] px-4 py-2 rounded-xl text-xs font-bold transition ${
+                  state.activeMission
+                    ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
+                    : 'bg-orange-500 hover:bg-orange-600 text-white shadow-lg shadow-orange-500/20'
+                }">
+                  Programar Vuelo →
+                </button>
+              </div>
+            </article>
+          `;
+        })
+        .join('');
+    }
+
+    function renderActiveFlight() {
+      const container = document.getElementById('active-flight-container');
+      const msn = state.activeMission;
+
+      if (!msn) {
+        container.innerHTML = `
+          <div class="bg-efb-panel border border-efb-border rounded-2xl p-8 text-center space-y-3">
+            <div class="w-12 h-12 rounded-2xl bg-efb-bg border border-efb-border mx-auto flex items-center justify-center text-slate-400">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
+            </div>
+            <h3 class="text-base font-bold text-white">No hay ningún vuelo activo en curso</h3>
+            <p class="text-xs text-slate-400 max-w-md mx-auto">Seleccioná y programá una orden desde la pestaña <strong>Despacho</strong> para cargar el plan de vuelo, reparto de tanques y tiempos OOOI.</p>
+            <button onclick="setTab('dispatch')" class="min-h-[42px] px-5 py-2 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold transition">Ir a Despacho</button>
+          </div>
+        `;
+        return;
+      }
+
+      const idx = msn.currentLegIndex;
+      const leg = msn.legs[idx];
+      const oooi = msn.oooi[idx] || { out: '', off: '', on: '', in: '' };
+      const perf = calcLJ35Performance(leg);
+      const origFbo = getFboInfo(leg.orig);
+      const destFbo = getFboInfo(leg.dest);
+      const atsRoute = buildSuggestedAtsRoute(leg.orig, leg.dest);
+      const legSched = msn.schedule?.legTimes?.[idx];
+      const suffix = msn.schedule?.tz === 'UTC' ? 'Z' : ' LT';
+      const sbUrl = buildSimBriefUrl(leg, legSched?.etdUtc);
+
+      container.innerHTML = `
+        <div class="bg-efb-panel border border-efb-border rounded-2xl p-4 sm:p-6 space-y-5">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-efb-border pb-4">
+            <div>
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded border ${getBadgeStyle(leg.legType)}">TRAMO ${idx + 1} DE ${msn.legs.length} • ${leg.legType}</span>
+                <span class="font-mono text-xs text-orange-400 font-bold">${msn.reg}</span>
+              </div>
+              <h2 class="font-mono text-lg sm:text-xl font-bold text-white mt-1.5">${leg.orig} (${AIRPORTS[leg.orig].city}) ➔ ${leg.dest} (${AIRPORTS[leg.dest].city})</h2>
+              <p class="text-xs text-slate-400 mt-0.5">${leg.legBrief || msn.narrative}</p>
+            </div>
+            <div class="font-mono text-xs bg-efb-bg border border-efb-border rounded-xl p-3 space-y-1 shrink-0">
+              ${legSched ? `<div><span class="text-slate-500">ETD / ETA:</span> <strong class="text-emerald-400">${legSched.etd}${suffix} ➔ ${legSched.eta}${suffix}</strong></div>` : ''}
+              <div><span class="text-slate-500">NIVEL / DIST:</span> <strong class="text-white">${leg.fl} • ${leg.dist} NM (${formatMin(leg.eet)})</strong></div>
+              <div><span class="text-slate-500">CARGA:</span> <strong class="text-amber-300">${leg.paxLabel}</strong></div>
+            </div>
+          </div>
+
+          ${msn.schedule?.notes ? `<div class="bg-amber-500/10 border border-amber-500/30 rounded-xl px-3.5 py-2 text-xs text-amber-200"><strong>Nota FBO:</strong> ${msn.schedule.notes}</div>` : ''}
+
+          <div class="bg-efb-bg border border-efb-border rounded-xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div class="min-w-0">
+              <span class="text-[10px] font-mono uppercase text-slate-500 block">Ruta ATS Sugerida (FMC / SimBrief)</span>
+              <code class="text-xs font-mono text-emerald-300 break-all">${atsRoute}</code>
+            </div>
+            <button onclick="copyText('${atsRoute}')" class="min-h-[36px] px-3 py-1.5 rounded-lg bg-efb-panel hover:bg-slate-800 border border-efb-border text-xs font-mono text-slate-200 shrink-0 transition">Copiar Ruta</button>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3 font-mono text-xs">
+            <div class="bg-efb-bg border border-efb-border rounded-xl p-3.5 space-y-1.5">
+              <span class="text-[10px] text-slate-500 block">ORIGEN • ${leg.orig} (Elev ${AIRPORTS[leg.orig].elev} ft • Rwy ${AIRPORTS[leg.orig].rwyFt} ft)</span>
+              <span class="text-white font-semibold block">${origFbo.fbo}</span>
+              <div class="text-[11px] text-slate-300 pt-1">ATIS ${origFbo.atis} • GND ${origFbo.gnd} • TWR ${origFbo.twr} • APP ${origFbo.app}</div>
+            </div>
+            <div class="bg-efb-bg border border-efb-border rounded-xl p-3.5 space-y-1.5">
+              <span class="text-[10px] text-slate-500 block">DESTINO • ${leg.dest} (Elev ${AIRPORTS[leg.dest].elev} ft • Rwy ${AIRPORTS[leg.dest].rwyFt} ft)</span>
+              <span class="text-white font-semibold block">${destFbo.fbo}</span>
+              <div class="text-[11px] text-slate-300 pt-1">ATIS ${destFbo.atis} • GND ${destFbo.gnd} • TWR ${destFbo.twr} • APP ${destFbo.app}</div>
+              ${renderSceneryPill(leg.dest)}
+            </div>
+          </div>
+
+          <div class="bg-efb-bg border border-efb-border rounded-xl p-4 space-y-3 font-mono text-xs">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <span class="font-bold text-white">Performance & Reparto de Tanques (Learjet 35A)</span>
+              <span class="text-[11px] px-2 py-0.5 rounded bg-orange-500/15 text-orange-300 border border-orange-500/35">${perf.flaps}</span>
+            </div>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-[11px]">
+              <div class="bg-efb-panel p-2.5 rounded-lg border border-efb-border">
+                <span class="text-slate-500 block text-[9px]">WING TANKS (L+R)</span>
+                <strong class="text-white">${perf.tanks.wingTotal} lb</strong> <span class="text-slate-400">(${perf.tanks.wingEach} c/u)</span>
+              </div>
+              <div class="bg-efb-panel p-2.5 rounded-lg border border-efb-border">
+                <span class="text-slate-500 block text-[9px]">TIP TANKS (L+R)</span>
+                <strong class="text-white">${perf.tanks.tipTotal} lb</strong> <span class="text-slate-400">(${perf.tanks.tipEach} c/u)</span>
+              </div>
+              <div class="bg-efb-panel p-2.5 rounded-lg border border-efb-border">
+                <span class="text-slate-500 block text-[9px]">FUSELAGE TANK</span>
+                <strong class="text-white">${perf.tanks.fuselage} lb</strong> <span class="text-slate-400">(Total ${leg.fuelLbs} lb)</span>
+              </div>
+              <div class="bg-efb-panel p-2.5 rounded-lg border border-efb-border">
+                <span class="text-slate-500 block text-[9px]">PESOS (ZFW/TOW/ELW)</span>
+                <strong class="text-white">${perf.zfw} / ${perf.tow} / ${perf.elw}</strong>
+              </div>
+            </div>
+            <div class="flex flex-wrap items-center justify-between gap-2 pt-1 text-[11px] text-slate-300">
+              <span>DESPEGUE: <strong class="text-emerald-400">V1 ${perf.v1} kt • VR ${perf.vr} kt • V2 ${perf.v2} kt</strong></span>
+              <span>ATERRIZAJE: <strong class="text-sky-400">VREF ${perf.vref} kt • VAPP ${perf.vapp} kt</strong></span>
+            </div>
+          </div>
+
+          <div class="bg-efb-bg border border-efb-border rounded-xl p-4 space-y-2.5">
+            <span class="text-[11px] font-mono font-bold text-slate-300 block">Registro OOOI en Vivo (Calzos / Despegue / Aterrizaje)</span>
+            <div class="grid grid-cols-4 gap-2 font-mono text-xs">
+              ${['out', 'off', 'on', 'in']
+                .map(
+                  pt => `
+                  <button onclick="recordOooi('${pt}')" class="min-h-[48px] p-2 rounded-xl border transition flex flex-col items-center justify-center ${
+                    oooi[pt]
+                      ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
+                      : 'bg-efb-panel hover:bg-slate-800 border-efb-border text-slate-300'
+                  }">
+                    <span class="text-[10px] uppercase text-slate-400">${pt}</span>
+                    <strong class="text-xs mt-0.5">${oooi[pt] || 'Marcar'}</strong>
+                  </button>
+                `
+                )
+                .join('')}
+            </div>
+          </div>
+
+          <div class="flex flex-wrap items-center justify-between gap-2.5 pt-2 border-t border-efb-border">
+            <div class="flex flex-wrap gap-2">
+              <a href="${sbUrl}" target="_blank" rel="noopener noreferrer" class="min-h-[44px] px-4 py-2.5 rounded-xl bg-sky-500/20 hover:bg-sky-500/30 border border-sky-500/40 text-sky-300 text-xs font-bold inline-flex items-center transition">
+                Despachar en SimBrief ↗
+              </a>
+              <button onclick="cancelOrPauseMission()" class="min-h-[44px] px-4 py-2.5 rounded-xl bg-efb-bg hover:bg-slate-800 border border-efb-border text-xs font-semibold text-slate-300 transition">
+                Pausar / Dejar Aquí
+              </button>
+            </div>
+            <button onclick="completeCurrentLeg()" class="min-h-[44px] px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold shadow-lg shadow-emerald-500/20 transition">
+              ${idx + 1 < msn.legs.length ? `Completar Tramo ${idx + 1} y Seguir →` : `Aterrizado en ${leg.dest} • Finalizar Misión ✓`}
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderFleetView() {
+      const southBtn = document.getElementById('map-zoom-south');
+      const americasBtn = document.getElementById('map-zoom-americas');
+      if (southBtn && americasBtn) {
+        southBtn.className = `px-3 py-1 rounded-lg text-xs font-semibold transition ${
+          state.mapZoom === 'south' ? 'bg-orange-500 text-white' : 'text-slate-400 hover:text-white'
+        }`;
+        americasBtn.className = `px-3 py-1 rounded-lg text-xs font-semibold transition ${
+          state.mapZoom === 'americas' ? 'bg-orange-500 text-white' : 'text-slate-400 hover:text-white'
+        }`;
+      }
+
+      const bounds =
+        state.mapZoom === 'americas'
+          ? { minLat: -56, maxLat: 30, minLon: -85, maxLon: -40 }
+          : { minLat: -56, maxLat: -16, minLon: -76, maxLon: -42 };
+
+      const project = (lat, lon) => {
+        const x = ((lon - bounds.minLon) / (bounds.maxLon - bounds.minLon)) * 760 + 20;
+        const y = ((bounds.maxLat - lat) / (bounds.maxLat - bounds.minLat)) * 320 + 20;
+        return { x: Math.max(15, Math.min(785, x)), y: Math.max(15, Math.min(345, y)) };
+      };
+
+      const dotsSvg = Object.values(AIRPORTS)
+        .filter(ap => isSceneryEnabled(ap.icao))
+        .map(ap => {
+          const p = project(ap.lat, ap.lon);
+          const isBase = ap.icao === 'SADF';
+          return `
+            <circle cx="${p.x}" cy="${p.y}" r="${isBase ? 4.5 : 2.5}" fill="${isBase ? '#f97316' : '#334155'}" />
+            ${isBase ? `<text x="${p.x + 7}" y="${p.y + 3}" fill="#fdba74" font-size="10" font-family="JetBrains Mono" font-weight="bold">SADF</text>` : ''}
+          `;
+        })
+        .join('');
+
+      let routeLineSvg = '';
+      if (state.activeMission) {
+        const pts = [state.activeMission.legs[0].orig, ...state.activeMission.legs.map(l => l.dest)]
+          .map(code => project(AIRPORTS[code].lat, AIRPORTS[code].lon))
+          .map(p => `${p.x},${p.y}`)
+          .join(' ');
+        routeLineSvg = `<polyline points="${pts}" fill="none" stroke="#f97316" stroke-width="2" stroke-dasharray="5,4" />`;
+      }
+
+      const aircraftMarkers = ['LV-BPA', 'LV-IYQ']
+        .map((reg, i) => {
+          const ac = state.fleet[reg];
+          const ap = AIRPORTS[ac.location] || AIRPORTS.SADF;
+          const p = project(ap.lat, ap.lon);
+          const offsetY = i === 0 ? -8 : 12;
+          const color = reg === 'LV-BPA' ? '#fb923c' : '#38bdf8';
+          return `
+            <g>
+              <circle cx="${p.x}" cy="${p.y}" r="6" fill="${color}" fill-opacity="0.25" stroke="${color}" stroke-width="1.5" />
+              <text x="${p.x + 8}" y="${p.y + offsetY}" fill="${color}" font-size="10" font-family="JetBrains Mono" font-weight="bold">${reg} (${ac.location})</text>
+            </g>
+          `;
+        })
+        .join('');
+
+      document.getElementById('fleet-map-container').innerHTML = `
+        <svg viewBox="0 0 800 360" class="w-full h-56 sm:h-72 block">
+          <g stroke="#141d2e" stroke-width="1">
+            <line x1="0" y1="90" x2="800" y2="90" /><line x1="0" y1="180" x2="800" y2="180" /><line x1="0" y1="270" x2="800" y2="270" />
+            <line x1="200" y1="0" x2="200" y2="360" /><line x1="400" y1="0" x2="400" y2="360" /><line x1="600" y1="0" x2="600" y2="360" />
+          </g>
+          ${dotsSvg}
+          ${routeLineSvg}
+          ${aircraftMarkers}
+        </svg>
+      `;
+
+      document.getElementById('fleet-cards-container').innerHTML = ['LV-BPA', 'LV-IYQ']
+        .map(reg => {
+          const ac = state.fleet[reg];
+          const isSelected = state.activeReg === reg;
+          const atBase = ac.location === 'SADF';
+          const canSwitch = !isSelected && state.pilotLocation === 'SADF' && atBase && !state.activeMission;
+          const inspPct = Math.max(0, Math.min(100, (ac.hoursUntilInspection / PHASE_INSPECTION_HOURS) * 100));
+
+          return `
+            <div class="bg-efb-panel border ${isSelected ? 'border-orange-500/60' : 'border-efb-border'} rounded-2xl p-5 space-y-4">
+              <div class="flex items-start justify-between gap-2">
+                <div>
+                  <div class="flex items-center gap-2">
+                    <h3 class="font-mono text-lg font-bold text-white">${reg}</h3>
+                    <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-efb-bg border border-efb-border text-slate-300">${ac.type}</span>
+                    ${isSelected ? '<span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-orange-500/15 text-orange-300 border border-orange-500/35">ACTIVO</span>' : ''}
+                  </div>
+                  <p class="text-xs text-slate-400 mt-1">${ac.role}</p>
+                </div>
+                <div class="text-right font-mono">
+                  <span class="text-xs text-slate-500 block">UBICACIÓN</span>
+                  <strong class="text-sm text-white">${ac.location}</strong>
+                  <span class="text-[10px] text-slate-400 block">${AIRPORTS[ac.location]?.city || ''}</span>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-3 gap-2 bg-efb-bg border border-efb-border rounded-xl p-3 font-mono text-xs">
+                <div><span class="text-[10px] text-slate-500 block">HORAS TOTAL</span><strong class="text-white">${ac.totalHours.toFixed(1)} h</strong></div>
+                <div><span class="text-[10px] text-slate-500 block">FUERA BASE</span><strong class="text-slate-200">${ac.legsAway}T / ${ac.hoursAway.toFixed(1)}h</strong></div>
+                <div><span class="text-[10px] text-slate-500 block">INSPECCIÓN</span><strong class="${ac.hoursUntilInspection <= 4.5 ? 'text-rose-400' : 'text-emerald-400'}">${ac.hoursUntilInspection.toFixed(1)} h</strong></div>
+              </div>
+
+              <div class="space-y-1">
+                <div class="flex justify-between text-[11px] font-mono text-slate-400">
+                  <span>Remanente Inspección de Fase (Hangar SADF)</span>
+                  <span>${ac.hoursUntilInspection.toFixed(1)} / ${PHASE_INSPECTION_HOURS}h</span>
+                </div>
+                <div class="w-full h-2 bg-efb-bg rounded-full overflow-hidden border border-efb-border">
+                  <div class="h-full ${ac.hoursUntilInspection <= 4.5 ? 'bg-rose-500' : 'bg-emerald-500'}" style="width: ${inspPct}%"></div>
+                </div>
+              </div>
+
+              <div class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-efb-border">
+                ${
+                  atBase
+                    ? `<button onclick="performHangarInspection('${reg}')" class="min-h-[40px] px-3.5 py-2 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/35 text-emerald-300 text-xs font-semibold transition">
+                        Hangar SADF: Resetear Inspección
+                      </button>`
+                    : `<span class="text-[11px] font-mono text-slate-500">Hangar disponible solo en SADF</span>`
+                }
+                ${
+                  isSelected
+                    ? `<span class="text-xs font-mono text-orange-400 font-semibold">En servicio</span>`
+                    : canSwitch
+                    ? `<button onclick="selectAircraft('${reg}')" class="min-h-[40px] px-4 py-2 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold transition">Cambiar a ${reg}</button>`
+                    : `<span class="text-[11px] font-mono text-slate-500">🔒 Bloqueado (Debés estar en SADF)</span>`
+                }
+              </div>
+            </div>
+          `;
+        })
+        .join('');
+    }
+
+    function renderSceneryList() {
+      const filters = [
+        { id: 'all', label: 'Todos (46)' },
+        { id: 'argentina', label: 'Argentina' },
+        { id: 'neighbor', label: 'Limítrofes' },
+        { id: 'usa_corridor', label: 'Corredor EE.UU.' }
+      ];
+
+      document.getElementById('scenery-filter-pills').innerHTML = filters
+        .map(
+          f => `
+          <button onclick="setSceneryFilter('${f.id}')" class="min-h-[36px] px-3 py-1.5 rounded-xl text-xs font-semibold border transition ${
+            state.sceneryFilter === f.id
+              ? 'bg-orange-500 text-white border-orange-500'
+              : 'bg-efb-bg text-slate-300 border-efb-border hover:bg-slate-800'
+          }">
+            ${f.label}
+          </button>
+        `
+        )
+        .join('');
+
+      const q = (document.getElementById('scenery-search')?.value || '').trim().toLowerCase();
+      const list = Object.values(AIRPORTS).filter(ap => {
+        if (state.sceneryFilter !== 'all' && ap.region !== state.sceneryFilter) return false;
+        if (q) {
+          const hay = `${ap.icao} ${ap.iata} ${ap.city} ${ap.name} ${ap.dev} ${ap.country}`.toLowerCase();
+          if (!hay.includes(q)) return false;
+        }
+        return true;
+      });
+
+      document.getElementById('scenery-list-container').innerHTML = list
+        .map(ap => {
+          const enabled = isSceneryEnabled(ap.icao);
+          const isBase = ap.icao === 'SADF';
+          return `
+            <div class="bg-efb-panel border ${enabled ? 'border-efb-border' : 'border-efb-border/50 opacity-60'} rounded-2xl p-4 flex flex-col justify-between gap-3 transition">
+              <div class="flex items-start justify-between gap-2">
+                <div>
+                  <div class="flex items-center gap-1.5">
+                    <span class="font-mono text-sm font-bold text-white">${ap.icao}</span>
+                    <span class="font-mono text-[10px] px-1.5 py-0.5 rounded bg-efb-bg border border-efb-border text-slate-400">${ap.country}</span>
+                    <span class="font-mono text-[10px] px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-300 border border-sky-500/25">${ap.sim}</span>
+                  </div>
+                  <p class="text-xs font-semibold text-slate-200 mt-1">${ap.city} — ${ap.name}</p>
+                  <p class="text-[11px] text-slate-400 mt-0.5">Dev: ${ap.dev} • Rwy ${ap.rwyFt} ft</p>
+                </div>
+                <button onclick="toggleScenery('${ap.icao}')" ${isBase ? 'disabled' : ''} class="min-w-[52px] min-h-[32px] px-2.5 py-1 rounded-xl font-mono text-[11px] font-bold border transition ${
+                  isBase
+                    ? 'bg-orange-500/20 border-orange-500/40 text-orange-300 cursor-default'
+                    : enabled
+                    ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300'
+                    : 'bg-efb-bg border-efb-border text-slate-500'
+                }">
+                  ${isBase ? 'BASE' : enabled ? 'ON' : 'OFF'}
+                </button>
+              </div>
+              <div class="flex items-center justify-between text-[11px] font-mono pt-2 border-t border-efb-border/60">
+                <span class="text-slate-500">Elev: ${ap.elev} ft</span>
+                <a href="${ap.url}" target="_blank" rel="noopener noreferrer" class="text-sky-400 hover:text-sky-300 underline">Ver Escenario ↗</a>
+              </div>
+            </div>
+          `;
+        })
+        .join('');
+    }
+
+    function renderLogbook() {
+      const totalFlights = state.logbook.length;
+      const totalHours = state.logbook.reduce((acc, item) => acc + (item.flownHours || 0), 0);
+      const medevacCount = state.logbook.filter(i => i.legType === 'MEDEVAC').length;
+      const ferryCount = state.logbook.filter(i => i.legType === 'FERRY' || i.legType === 'RETORNO A BASE').length;
+
+      document.getElementById('logbook-summary-container').innerHTML = `
+        <div class="bg-efb-panel border border-efb-border rounded-2xl p-4 font-mono">
+          <span class="text-[10px] text-slate-500 block">TRAMOS VOLADOS</span>
+          <strong class="text-xl text-white mt-1 block">${totalFlights}</strong>
+        </div>
+        <div class="bg-efb-panel border border-efb-border rounded-2xl p-4 font-mono">
+          <span class="text-[10px] text-slate-500 block">HORAS TOTALES</span>
+          <strong class="text-xl text-orange-400 mt-1 block">${totalHours.toFixed(1)} h</strong>
+        </div>
+        <div class="bg-efb-panel border border-efb-border rounded-2xl p-4 font-mono">
+          <span class="text-[10px] text-slate-500 block">SANITARIOS (IYQ)</span>
+          <strong class="text-xl text-rose-400 mt-1 block">${medevacCount}</strong>
+        </div>
+        <div class="bg-efb-panel border border-efb-border rounded-2xl p-4 font-mono">
+          <span class="text-[10px] text-slate-500 block">VUELOS FERRY</span>
+          <strong class="text-xl text-slate-300 mt-1 block">${ferryCount}</strong>
+        </div>
+      `;
+
+      const listEl = document.getElementById('logbook-list-container');
+      if (!totalFlights) {
+        listEl.innerHTML = `
+          <div class="bg-efb-panel border border-efb-border rounded-2xl p-8 text-center">
+            <p class="text-sm font-bold text-white">Tu bitácora todavía está vacía</p>
+            <p class="text-xs text-slate-400 mt-1">Completá tramos desde la pestaña <strong>Vuelo</strong> para registrar tus horas y aterrizajes.</p>
+          </div>
+        `;
+        return;
+      }
+
+      listEl.innerHTML = state.logbook
+        .map(entry => {
+          const o = entry.oooi || {};
+          const oooiText = o.out || o.off || o.on || o.in ? `OUT ${o.out || '--'} • OFF ${o.off || '--'} • ON ${o.on || '--'} • IN ${o.in || '--'}` : 'Sin marcas OOOI';
+          return `
+            <div class="bg-efb-panel border border-efb-border rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 font-mono text-xs">
+              <div class="space-y-1">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span class="text-slate-400">${entry.date}</span>
+                  <span class="font-bold text-orange-400">${entry.reg}</span>
+                  <span class="text-[10px] px-1.5 py-0.5 rounded border ${getBadgeStyle(entry.legType)}">${entry.legType}</span>
+                </div>
+                <div class="text-sm font-bold text-white">${entry.orig} (${AIRPORTS[entry.orig]?.city || ''}) ➔ ${entry.dest} (${AIRPORTS[entry.dest]?.city || ''})</div>
+                <div class="text-[10px] text-slate-400">${oooiText}</div>
+              </div>
+              <div class="text-left sm:text-right space-y-0.5 shrink-0">
+                <span class="text-emerald-400 font-bold block">${formatMin(entry.eet)} (${entry.flownHours.toFixed(2)}h)</span>
+                <span class="text-slate-400 block">${entry.dist} NM • ${entry.pax} PAX</span>
+              </div>
+            </div>
+          `;
+        })
+        .join('');
+    }
+
+    function renderAll() {
+      renderHeaderAndStrip();
+      updateBadges();
+      updateBackupBadge();
+      renderDispatchList();
+      renderActiveFlight();
+      renderFleetView();
+      renderSceneryList();
+      renderLogbook();
+    }
+
+    // =========================================================================
+    // 10. CONTROLS, TABS, MODALS, TOAST & CLOCK
+    // =========================================================================
+    function syncControlsWithState() {
+      document.getElementById('time-slider').value = String(state.availableHours);
+      document.getElementById('toggle-longrange').checked = Boolean(state.longRangeMode);
+      document.getElementById('mission-pref').value = state.missionPref || 'auto';
+      updateTimeDisplay(state.availableHours, true);
+    }
+
+    function setTab(tabName) {
+      ['dispatch', 'active', 'fleet', 'scenery', 'logbook'].forEach(t => {
+        const view = document.getElementById(`view-${t}`);
+        const btn = document.getElementById(`tab-${t}`);
+        if (view) view.classList.toggle('hidden', t !== tabName);
+        if (btn) {
+          if (t === tabName) {
+            btn.classList.add('border-orange-500', 'text-white');
+            btn.classList.remove('border-transparent', 'text-slate-400');
+          } else {
+            btn.classList.remove('border-orange-500', 'text-white');
+            btn.classList.add('border-transparent', 'text-slate-400');
+          }
+        }
+      });
+    }
+
+    function updateTimeDisplay(val, skipSave) {
+      state.availableHours = parseFloat(val);
+      let label = `${state.availableHours.toFixed(2).replace(/\.00$/, '.0')} hs`;
+      if (state.availableHours === 0.75) label = '45 min';
+      else if (state.availableHours >= 12) label = `${state.availableHours.toFixed(1)} hs (Largo)`;
+      document.getElementById('time-display').textContent = label;
+      if (!skipSave) saveState();
+    }
+
+    function setTimePreset(hours, enableLongRange) {
+      state.availableHours = hours;
+      state.longRangeMode = Boolean(enableLongRange);
+      syncControlsWithState();
+      saveState();
+      generateDispatches();
+    }
+
+    function toggleLongRange(checked) {
+      state.longRangeMode = Boolean(checked);
+      saveState();
+      generateDispatches();
+    }
+
+    function setMissionPref(pref) {
+      state.missionPref = pref;
+      saveState();
+      generateDispatches();
+    }
+
+    function copyText(txt) {
+      const ta = document.createElement('textarea');
+      ta.value = txt;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      try {
+        document.execCommand('copy');
+        showToast('Copiado al portapapeles.', 'success');
+      } catch (e) {}
+      document.body.removeChild(ta);
+    }
+
+    function openConfirmModal(title, body, onConfirm) {
+      document.getElementById('confirm-modal-title').textContent = title;
+      document.getElementById('confirm-modal-body').textContent = body;
+      modalConfirmCallback = onConfirm;
+      document.getElementById('confirm-modal').classList.remove('hidden');
+    }
+
+    function closeConfirmModal() {
+      modalConfirmCallback = null;
+      document.getElementById('confirm-modal').classList.add('hidden');
+    }
+
+    document.getElementById('confirm-modal-ok').addEventListener('click', () => {
+      const cb = modalConfirmCallback;
+      closeConfirmModal();
+      if (typeof cb === 'function') cb();
+    });
+
+    function showToast(msg, type) {
+      const box = document.getElementById('toast-box');
+      if (!box) return;
+      const styles = {
+        success: 'bg-emerald-950/95 border-emerald-500/50 text-emerald-200',
+        warn: 'bg-amber-950/95 border-amber-500/50 text-amber-200',
+        error: 'bg-rose-950/95 border-rose-500/50 text-rose-200'
+      };
+      box.className = `fixed bottom-20 md:bottom-5 right-4 left-4 sm:left-auto z-50 max-w-sm px-4 py-3 rounded-xl border text-xs font-medium shadow-2xl ${styles[type] || styles.success}`;
+      box.textContent = msg;
+      box.classList.remove('hidden');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => box.classList.add('hidden'), 3600);
+    }
+
+    function updateUtcClock() {
+      const now = new Date();
+      const hh = String(now.getUTCHours()).padStart(2, '0');
+      const mm = String(now.getUTCMinutes()).padStart(2, '0');
+      const ss = String(now.getUTCSeconds()).padStart(2, '0');
+      const el = document.getElementById('utc-clock');
+      if (el) el.textContent = `${hh}:${mm}:${ss} Z`;
+    }
+
+    // =========================================================================
+    // 11. INITIALIZATION
+    // =========================================================================
+    window.__efbApplyRemoteState = function (remoteData) {
+      const migrated = migrateState(remoteData);
+      migrated.hasUnsavedBackupChanges = false;
+      state = migrated;
+      saveLocalState();
+      syncControlsWithState();
+      renderAll();
+      generateDispatches();
+    };
+
+    window.addEventListener('DOMContentLoaded', () => {
+      loadLocalState();
+      setupPwaAssets();
+      syncControlsWithState();
+      renderAll();
+      generateDispatches();
+      setTab(state.activeMission ? 'active' : 'dispatch');
+      updateUtcClock();
+      setInterval(updateUtcClock, 1000);
+
+      const creds = getGistCreds();
+      if (creds.token && creds.gistId) {
+        updateSyncIndicators(`GIST ${creds.gistId.slice(0, 6)}`, true);
+        pullFromGist(true);
+      }
+    });
+  </script>
+
+  <!-- ==================== OPTIONAL CANVAS CLOUD SYNC ==================== -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    async function initCloudSync() {
+      if (typeof __firebase_config === 'undefined' || !__firebase_config) return;
+
+      try {
+        const firebaseConfig = JSON.parse(__firebase_config);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'baires-fly-efb';
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+          await signInWithCustomToken(auth, __initial_auth_token);
+        } else {
+          await signInAnonymously(auth);
+        }
+
+        const user = auth.currentUser;
+        if (!user) return;
+
+        const privateDocRef = doc(db, 'artifacts', appId, 'users', user.uid, 'efbState', 'current');
+        const snap = await getDoc(privateDocRef);
+        if (snap.exists() && snap.data() && snap.data().payload) {
+          window.__efbApplyRemoteState(snap.data().payload);
+        }
+
+        window.__efbSyncBridge = {
+          pushState: async latestState => {
+            try {
+              await setDoc(privateDocRef, {
+                schemaVersion: 4,
+                updatedAt: new Date().toISOString(),
+                payload: JSON.parse(JSON.stringify(latestState))
+              });
+            } catch (e) {}
+          }
+        };
+      } catch (err) {}
+    }
+
+    initCloudSync();
+  </script>
+</body>
+</html>
