@@ -741,6 +741,677 @@
     }
 
     // =========================================================================
+    // 3. AVIATION MATH, LEARJET 35A PERFORMANCE & SIMBRIEF DISPATCH
+    // =========================================================================
+    function formatMinutes(totalMin) {
+      const mins = Math.max(0, Math.round(totalMin));
+      const h = Math.floor(mins / 60);
+      const m = mins % 60;
+      if (h === 0) return `${m}m`;
+      return `${h}h ${String(m).padStart(2, '0')}m`;
+    }
+
+    function toRad(deg) {
+      return (deg * Math.PI) / 180;
+    }
+
+    function toDeg(rad) {
+      return (rad * 180) / Math.PI;
+    }
+
+    function calcDistanceNM(fromIcao, toIcao) {
+      const a = AIRPORTS[fromIcao];
+      const b = AIRPORTS[toIcao];
+      if (!a || !b || fromIcao === toIcao) return 0;
+      const R = 3440.065;
+      const dLat = toRad(b.lat - a.lat);
+      const dLon = toRad(b.lon - a.lon);
+      const lat1 = toRad(a.lat);
+      const lat2 = toRad(b.lat);
+      const sinDLat = Math.sin(dLat / 2);
+      const sinDLon = Math.sin(dLon / 2);
+      const h = sinDLat * sinDLat + Math.cos(lat1) * Math.cos(lat2) * sinDLon * sinDLon;
+      const c = 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+      return Math.max(25, Math.round(R * c * 1.07));
+    }
+
+    function calcBearing(fromIcao, toIcao) {
+      const a = AIRPORTS[fromIcao];
+      const b = AIRPORTS[toIcao];
+      if (!a || !b) return 0;
+      const lat1 = toRad(a.lat);
+      const lat2 = toRad(b.lat);
+      const dLon = toRad(b.lon - a.lon);
+      const y = Math.sin(dLon) * Math.cos(lat2);
+      const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
+      return (Math.round(toDeg(Math.atan2(y, x))) + 360) % 360;
+    }
+
+    function calcEETMin(distNM) {
+      if (distNM <= 0) return 0;
+      if (distNM < 60) return Math.max(16, Math.round((distNM / 260) * 60 + 8));
+      return Math.max(24, Math.round((distNM / 425) * 60 + 14));
+    }
+
+    function calcRVSMFlightLevel(fromIcao, toIcao, distNM) {
+      const brg = calcBearing(fromIcao, toIcao);
+      const isEast = brg >= 0 && brg < 180;
+      if (distNM < 90) return isEast ? 'FL150' : 'FL160';
+      if (distNM < 200) return isEast ? 'FL270' : 'FL280';
+      if (distNM < 450) return isEast ? 'FL350' : 'FL360';
+      if (distNM < 950) return isEast ? 'FL390' : 'FL380';
+      return isEast ? 'FL410' : 'FL400';
+    }
+
+    function calcLearjetPerformance(fromIcao, toIcao, distNM, eetMin, paxCount, isMedevac) {
+      const orig = AIRPORTS[fromIcao] || { elev: 10, rwyFt: 6000 };
+      const dest = AIRPORTS[toIcao] || { elev: 10, rwyFt: 6000 };
+
+      const bowLb = isMedevac ? 10050 : 9850;
+      const payloadLb = paxCount > 0 ? paxCount * 195 + (isMedevac ? 350 : paxCount * 45) : 0;
+      const zfwLb = Math.min(13500, bowLb + payloadLb);
+
+      const tripFuelLb = Math.round((eetMin / 60) * 1340 + 260);
+      const reserveLb = 1150;
+      const taxiLb = 200;
+      const blockLb = Math.min(6200, Math.ceil((tripFuelLb + reserveLb + taxiLb) / 50) * 50);
+
+      // Realistic LJ35A Tank Distribution (Wings max 2480, Tips max 2420, Fuselage max 1330)
+      let rem = blockLb;
+      const wingLb = Math.min(2480, Math.round(rem * 0.44));
+      rem -= wingLb;
+      const tipLb = Math.min(2420, Math.round(rem * 0.78));
+      rem -= tipLb;
+      const fuselageLb = Math.max(0, Math.min(1330, rem));
+
+      const towLb = zfwLb + blockLb - taxiLb;
+      const elwLb = Math.max(zfwLb + 600, towLb - tripFuelLb);
+      const mlwWarning = elwLb > 15300;
+
+      const highOrShort = orig.rwyFt < 6600 || orig.elev > 3500 || towLb > 16800;
+      const toFlaps = highOrShort ? 'FLAPS 20°' : 'FLAPS 8°';
+      const weightDelta = (towLb - 14500) / 1000;
+      const elevCorr = Math.round(orig.elev / 1000);
+
+      const v1 = Math.round((highOrShort ? 114 : 119) + weightDelta * 3.2 + elevCorr);
+      const vr = v1 + 5;
+      const v2 = vr + 7;
+
+      const ldgDelta = (elwLb - 12500) / 1000;
+      const vref = Math.round(115 + ldgDelta * 3.0 + Math.round(dest.elev / 1200));
+      const vapp = vref + 5;
+
+      return {
+        zfwLb,
+        blockLb,
+        wingLb,
+        tipLb,
+        fuselageLb,
+        towLb,
+        elwLb,
+        mlwWarning,
+        toFlaps,
+        v1,
+        vr,
+        v2,
+        vref,
+        vapp
+      };
+    }
+
+    function getAtsRoute(fromIcao, toIcao) {
+      const key = `${fromIcao}-${toIcao}`;
+      if (ATS_CORRIDORS[key]) return ATS_CORRIDORS[key];
+      return `${fromIcao} DCT ${toIcao}`;
+    }
+
+    function buildSimBriefUrl(leg, reg, etdUtc) {
+      const cleanReg = (reg || 'LV-BPA').replace(/[^A-Z0-9]/gi, '');
+      const flNum = (leg.fl || 'FL370').replace('FL', '') + '00';
+      const params = new URLSearchParams({
+        airline: 'BFY',
+        fltnum: cleanReg.replace('LV', ''),
+        orig: leg.from,
+        dest: leg.to,
+        type: 'LJ35',
+        reg: reg || 'LV-BPA',
+        pax: String(leg.pax || 0),
+        fl: flNum,
+        route: leg.atsRoute || `${leg.from} DCT ${leg.to}`
+      });
+      if (etdUtc && etdUtc.includes(':')) {
+        const [hh, mm] = etdUtc.split(':');
+        params.set('deph', hh);
+        params.set('depm', mm);
+      }
+      return `https://dispatch.simbrief.com/options/custom?${params.toString()}`;
+    }
+
+    // =========================================================================
+    // 4. PWA INSTALLABLE ASSETS & HOME SCREEN SETUP
+    // =========================================================================
+    function generateAppIconDataUrl(size) {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return '';
+
+        const grad = ctx.createLinearGradient(0, 0, size, size);
+        grad.addColorStop(0, '#0f172a');
+        grad.addColorStop(1, '#090d14');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, size, size);
+
+        const pad = Math.round(size * 0.14);
+        const box = size - pad * 2;
+        const r = Math.round(size * 0.22);
+        const accent = ctx.createLinearGradient(pad, pad, pad + box, pad + box);
+        accent.addColorStop(0, '#f97316');
+        accent.addColorStop(1, '#d97706');
+
+        ctx.fillStyle = accent;
+        ctx.beginPath();
+        ctx.moveTo(pad + r, pad);
+        ctx.lineTo(pad + box - r, pad);
+        ctx.quadraticCurveTo(pad + box, pad, pad + box, pad + r);
+        ctx.lineTo(pad + box, pad + box - r);
+        ctx.quadraticCurveTo(pad + box, pad + box, pad + box - r, pad + box);
+        ctx.lineTo(pad + r, pad + box);
+        ctx.quadraticCurveTo(pad, pad + box, pad, pad + box - r);
+        ctx.lineTo(pad, pad + r);
+        ctx.quadraticCurveTo(pad, pad, pad + r, pad);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = Math.max(4, Math.round(size * 0.045));
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.beginPath();
+        ctx.moveTo(size * 0.5, size * 0.27);
+        ctx.lineTo(size * 0.72, size * 0.71);
+        ctx.lineTo(size * 0.5, size * 0.62);
+        ctx.lineTo(size * 0.28, size * 0.71);
+        ctx.closePath();
+        ctx.stroke();
+
+        return canvas.toDataURL('image/png');
+      } catch (e) {
+        return '';
+      }
+    }
+
+    function setupPwaAssets() {
+      try {
+        const icon192 = generateAppIconDataUrl(192);
+        const icon512 = generateAppIconDataUrl(512);
+        if (icon192) {
+          const appleLink = document.getElementById('apple-touch-icon-link');
+          const favLink = document.getElementById('favicon-link');
+          if (appleLink) appleLink.href = icon192;
+          if (favLink) favLink.href = icon192;
+        }
+
+        const pageUrl = window.location.href.split('#')[0];
+        const manifestObj = {
+          name: 'Baires Fly — Pilot EFB',
+          short_name: 'Baires Fly',
+          description: 'Electronic Flight Bag & Crew Dispatch para flota Learjet 35A (SADF)',
+          start_url: pageUrl,
+          scope: pageUrl.substring(0, pageUrl.lastIndexOf('/') + 1),
+          display: 'standalone',
+          orientation: 'any',
+          background_color: '#090d14',
+          theme_color: '#090d14',
+          icons: [
+            { src: icon192, sizes: '192x192', type: 'image/png', purpose: 'any maskable' },
+            { src: icon512, sizes: '512x512', type: 'image/png', purpose: 'any maskable' }
+          ]
+        };
+
+        const blob = new Blob([JSON.stringify(manifestObj)], { type: 'application/manifest+json' });
+        const manifestUrl = URL.createObjectURL(blob);
+        const manifestLink = document.getElementById('pwa-manifest-link');
+        if (manifestLink) manifestLink.href = manifestUrl;
+
+        const isStandalone =
+          window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+        const isMobileOrTablet = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        const dismissed = localStorage.getItem('baires_fly_install_dismissed') === '1';
+
+        if (!isStandalone && isMobileOrTablet && !dismissed) {
+          const banner = document.getElementById('pwa-install-banner');
+          if (banner) banner.classList.remove('hidden');
+        }
+      } catch (e) {}
+    }
+
+    window.addEventListener('beforeinstallprompt', e => {
+      e.preventDefault();
+      deferredInstallPrompt = e;
+      const hdrBtn = document.getElementById('header-install-btn');
+      const modBtn = document.getElementById('modal-native-install-btn');
+      if (hdrBtn) {
+        hdrBtn.classList.remove('hidden');
+        hdrBtn.classList.add('flex');
+      }
+      if (modBtn) modBtn.classList.remove('hidden');
+    });
+
+    async function triggerPwaInstall() {
+      if (deferredInstallPrompt) {
+        deferredInstallPrompt.prompt();
+        const choice = await deferredInstallPrompt.userChoice;
+        if (choice && choice.outcome === 'accepted') {
+          showToast('¡Baires Fly instalada en tu dispositivo!', 'success');
+        }
+        deferredInstallPrompt = null;
+        return;
+      }
+      openBackupModal();
+      showToast('Seguí las instrucciones de Compartir ➔ Agregar a pantalla de inicio.', 'success');
+    }
+
+    function dismissInstallBanner() {
+      const banner = document.getElementById('pwa-install-banner');
+      if (banner) banner.classList.add('hidden');
+      try {
+        localStorage.setItem('baires_fly_install_dismissed', '1');
+      } catch (e) {}
+    }
+
+    // =========================================================================
+    // 5. GITHUB GIST MULTI-DEVICE SYNC & PORTABLE JSON BACKUP
+    // =========================================================================
+    function sanitizeToken(raw) {
+      const t = (raw || '').trim();
+      if (t.length === 80 && t.slice(0, 40) === t.slice(40)) return t.slice(0, 40);
+      return t;
+    }
+
+    function sanitizeGistId(raw) {
+      const val = (raw || '').trim();
+      if (!val) return '';
+      const match = val.match(/([a-f0-9]{20,40})/i);
+      return match ? match[1] : val;
+    }
+
+    function getGistCreds() {
+      try {
+        const raw = localStorage.getItem(GIST_CREDS_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          return {
+            token: sanitizeToken(parsed.token || ''),
+            gistId: sanitizeGistId(parsed.gistId || '')
+          };
+        }
+      } catch (e) {}
+      return { token: '', gistId: '' };
+    }
+
+    function saveGistCreds(token, gistId) {
+      try {
+        localStorage.setItem(
+          GIST_CREDS_KEY,
+          JSON.stringify({ token: sanitizeToken(token), gistId: sanitizeGistId(gistId) })
+        );
+      } catch (e) {}
+    }
+
+    function updateSyncIndicators(label, connected) {
+      const statusLbl = document.getElementById('sync-status-label');
+      const badge = document.getElementById('backup-cloud-badge');
+      const ind = document.getElementById('gist-sync-indicator');
+      if (statusLbl) statusLbl.textContent = label;
+      if (badge) {
+        badge.textContent = label;
+        badge.className = `text-[10px] font-mono px-2 py-0.5 rounded border ${
+          connected
+            ? 'bg-emerald-500/15 border-emerald-500/35 text-emerald-300'
+            : 'bg-efb-bg border-efb-border text-slate-400'
+        }`;
+      }
+      if (ind) {
+        ind.textContent = connected ? `Conectado (${label})` : 'No vinculado';
+        ind.className = `text-[10px] font-mono ${connected ? 'text-emerald-400 font-bold' : 'text-slate-400'}`;
+      }
+      updateBackupBadge();
+    }
+
+    function showGistError(msg) {
+      const box = document.getElementById('gist-error-box');
+      if (!box) return;
+      if (!msg) {
+        box.classList.add('hidden');
+        box.textContent = '';
+      } else {
+        box.textContent = msg;
+        box.classList.remove('hidden');
+      }
+    }
+
+    function scheduleGistPush() {
+      const creds = getGistCreds();
+      if (!creds.token || !creds.gistId) return;
+      clearTimeout(gistDebounceTimer);
+      gistDebounceTimer = setTimeout(() => {
+        pushToGist(creds.token, creds.gistId, true);
+      }, 2000);
+    }
+
+    async function findExistingBairesFlyGist(token) {
+      const res = await fetch('https://api.github.com/gists?per_page=30', {
+        headers: {
+          Authorization: `token ${token}`,
+          Accept: 'application/vnd.github.v3+json'
+        }
+      });
+      if (!res.ok) return null;
+      const list = await res.json();
+      if (!Array.isArray(list)) return null;
+      const found = list.find(g => g.files && g.files['baires_fly_efb_backup.json']);
+      return found ? found.id : null;
+    }
+
+    async function pushToGist(token, gistId, silent) {
+      const cleanToken = sanitizeToken(token);
+      let cleanGistId = sanitizeGistId(gistId);
+      if (!cleanToken) return null;
+
+      const payload = {
+        description: 'Baires Fly EFB — Estado de Flota y Bitácora',
+        public: false,
+        files: {
+          'baires_fly_efb_backup.json': {
+            content: JSON.stringify(state, null, 2)
+          }
+        }
+      };
+
+      const headers = {
+        Authorization: `token ${cleanToken}`,
+        Accept: 'application/vnd.github.v3+json',
+        'Content-Type': 'application/json'
+      };
+
+      try {
+        let res;
+        if (cleanGistId) {
+          res = await fetch(`https://api.github.com/gists/${cleanGistId}`, {
+            method: 'PATCH',
+            headers,
+            body: JSON.stringify(payload)
+          });
+          if (res.status === 404) {
+            cleanGistId = '';
+          }
+        }
+
+        if (!cleanGistId) {
+          const existingId = await findExistingBairesFlyGist(cleanToken);
+          if (existingId) {
+            cleanGistId = existingId;
+            res = await fetch(`https://api.github.com/gists/${cleanGistId}`, {
+              method: 'PATCH',
+              headers,
+              body: JSON.stringify(payload)
+            });
+          } else {
+            res = await fetch('https://api.github.com/gists', {
+              method: 'POST',
+              headers,
+              body: JSON.stringify(payload)
+            });
+          }
+        }
+
+        if (!res.ok) {
+          if (!silent) {
+            const errHint =
+              res.status === 401
+                ? 'Token inválido o expirado (HTTP 401). Generá un Token (classic) nuevo.'
+                : res.status === 403 || res.status === 404
+                ? `HTTP ${res.status}: Verificá que el token tenga tildado el permiso "gist" y dejá el Gist ID vacío.`
+                : `Error HTTP ${res.status} al conectar con GitHub.`;
+            showGistError(errHint);
+            showToast(errHint, 'error');
+          }
+          return null;
+        }
+
+        const data = await res.json();
+        saveGistCreds(cleanToken, data.id);
+        state.hasUnsavedBackupChanges = false;
+        state.lastBackupAt = new Date().toISOString();
+        saveLocalState();
+
+        const idInput = document.getElementById('gist-id-input');
+        if (idInput) idInput.value = data.id;
+        showGistError('');
+        updateSyncIndicators(`GIST ${data.id.slice(0, 6)}`, true);
+
+        if (!silent) {
+          showToast('¡Sincronizado con GitHub Gist! Ya podés copiar el Link Mágico para tu iPad.', 'success');
+        }
+        return data.id;
+      } catch (err) {
+        if (!silent) {
+          const msg = 'No se pudo conectar con api.github.com (revisá tu conexión o abrilo desde github.io).';
+          showGistError(msg);
+          showToast(msg, 'error');
+        }
+        return null;
+      }
+    }
+
+    async function connectAndPushGist() {
+      const tokenInput = document.getElementById('gist-token-input');
+      const idInput = document.getElementById('gist-id-input');
+      const token = sanitizeToken(tokenInput ? tokenInput.value : '');
+      const gistId = sanitizeGistId(idInput ? idInput.value : '');
+      if (!token) {
+        showGistError('Pegá primero tu Personal Access Token de GitHub (ghp_...).');
+        return;
+      }
+      if (tokenInput) tokenInput.value = token;
+      if (idInput) idInput.value = gistId;
+      showGistError('');
+      await pushToGist(token, gistId, false);
+    }
+
+    async function pullFromGist(silent) {
+      const tokenInput = document.getElementById('gist-token-input');
+      const idInput = document.getElementById('gist-id-input');
+      const saved = getGistCreds();
+      const token = sanitizeToken((tokenInput && tokenInput.value) || saved.token);
+      let gistId = sanitizeGistId((idInput && idInput.value) || saved.gistId);
+
+      if (!token) {
+        if (!silent) showGistError('Ingresá tu Token de GitHub para traer el estado.');
+        return false;
+      }
+
+      try {
+        if (!gistId) {
+          gistId = await findExistingBairesFlyGist(token);
+        }
+        if (!gistId) {
+          if (!silent) showGistError('No se encontró ningún Gist previo. Tocá "Vincular y Subir a GitHub" primero.');
+          return false;
+        }
+
+        const res = await fetch(`https://api.github.com/gists/${gistId}`, {
+          headers: {
+            Authorization: `token ${token}`,
+            Accept: 'application/vnd.github.v3+json'
+          }
+        });
+
+        if (!res.ok) {
+          if (!silent) showGistError(`Error HTTP ${res.status} al descargar el Gist.`);
+          return false;
+        }
+
+        const data = await res.json();
+        const fileObj = data.files && data.files['baires_fly_efb_backup.json'];
+        if (!fileObj || !fileObj.content) {
+          if (!silent) showGistError('El Gist existe pero no contiene datos de Baires Fly.');
+          return false;
+        }
+
+        const remoteParsed = JSON.parse(fileObj.content);
+        const localTime = Date.parse(state.updatedAt || 0) || 0;
+        const remoteTime = Date.parse(remoteParsed.updatedAt || 0) || 0;
+
+        saveGistCreds(token, gistId);
+        if (tokenInput) tokenInput.value = token;
+        if (idInput) idInput.value = gistId;
+        updateSyncIndicators(`GIST ${gistId.slice(0, 6)}`, true);
+
+        if (!silent || remoteTime >= localTime) {
+          state = migrateState(remoteParsed);
+          state.hasUnsavedBackupChanges = false;
+          saveLocalState();
+          syncControlsFromState();
+          renderAll();
+          generateDispatches();
+          if (!silent) showToast('Estado descargado y sincronizado desde GitHub.', 'success');
+        }
+        return true;
+      } catch (e) {
+        if (!silent) showGistError('Error de red al leer GitHub Gist.');
+        return false;
+      }
+    }
+
+    function copyMagicSyncLink() {
+      const creds = getGistCreds();
+      const token = sanitizeToken((document.getElementById('gist-token-input')?.value || '') || creds.token);
+      const gistId = sanitizeGistId((document.getElementById('gist-id-input')?.value || '') || creds.gistId);
+      if (!token || !gistId) {
+        showGistError('Primero vinculá tu Token y subí el estado a GitHub para generar el Link Mágico.');
+        return;
+      }
+      const baseUrl = window.location.href.split('#')[0];
+      const payload = btoa(JSON.stringify({ t: token, g: gistId }));
+      const magicUrl = `${baseUrl}#sync=${encodeURIComponent(payload)}`;
+      copyText(magicUrl, 'Link Mágico para iPad/Celular');
+    }
+
+    async function checkMagicLinkOnBoot() {
+      try {
+        const hash = window.location.hash || '';
+        if (!hash.startsWith('#sync=')) return false;
+        const encoded = decodeURIComponent(hash.slice(6));
+        const decoded = JSON.parse(atob(encoded));
+        if (decoded && decoded.t && decoded.g) {
+          saveGistCreds(decoded.t, decoded.g);
+          history.replaceState(null, '', window.location.pathname + window.location.search);
+          const ok = await pullFromGist(false);
+          return ok;
+        }
+      } catch (e) {}
+      return false;
+    }
+
+    function openBackupModal() {
+      const creds = getGistCreds();
+      const tokenInput = document.getElementById('gist-token-input');
+      const idInput = document.getElementById('gist-id-input');
+      if (tokenInput && creds.token) tokenInput.value = creds.token;
+      if (idInput && creds.gistId) idInput.value = creds.gistId;
+      showGistError('');
+
+      const totalHrs = state.logbook.reduce((acc, e) => acc + (e.hours || 0), 0);
+      const summaryEl = document.getElementById('backup-snapshot-summary');
+      if (summaryEl) {
+        summaryEl.innerHTML = `
+          <div>
+            <span class="text-[10px] text-slate-400 block">POSICIÓN</span>
+            <strong class="text-white">${state.pilotLocation} (${state.activeReg})</strong>
+          </div>
+          <div>
+            <span class="text-[10px] text-slate-400 block">BITÁCORA</span>
+            <strong class="text-orange-400">${state.logbook.length} tr / ${totalHrs.toFixed(1)}h</strong>
+          </div>
+          <div>
+            <span class="text-[10px] text-slate-400 block">ESCENARIOS</span>
+            <strong class="text-emerald-400">${Object.values(state.enabledSceneries).filter(Boolean).length}/${Object.keys(AIRPORTS).length}</strong>
+          </div>
+        `;
+      }
+      document.getElementById('backup-modal').classList.remove('hidden');
+    }
+
+    function closeBackupModal() {
+      document.getElementById('backup-modal').classList.add('hidden');
+    }
+
+    function exportBackupFile() {
+      const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `baires_fly_efb_backup_${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      state.hasUnsavedBackupChanges = false;
+      state.lastBackupAt = new Date().toISOString();
+      saveLocalState();
+      updateBackupBadge();
+      showToast('Archivo de respaldo .JSON descargado.', 'success');
+    }
+
+    function copyBackupToClipboard() {
+      copyText(JSON.stringify(state), 'Código de respaldo JSON');
+      state.hasUnsavedBackupChanges = false;
+      saveLocalState();
+      updateBackupBadge();
+    }
+
+    function applyImportedJsonString(rawText) {
+      try {
+        const parsed = JSON.parse(rawText);
+        state = migrateState(parsed);
+        state.hasUnsavedBackupChanges = false;
+        saveLocalState();
+        syncControlsFromState();
+        renderAll();
+        generateDispatches();
+        closeBackupModal();
+        showToast('Respaldo restaurado correctamente.', 'success');
+      } catch (e) {
+        showToast('El código o archivo JSON no es válido.', 'error');
+      }
+    }
+
+    function importBackupFromFile(event) {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = e => {
+        applyImportedJsonString(e.target.result);
+      };
+      reader.readAsText(file);
+      event.target.value = '';
+    }
+
+    function importBackupFromText() {
+      const input = document.getElementById('backup-paste-input');
+      if (!input || !input.value.trim()) {
+        showToast('Pegá primero el código JSON en el campo de texto.', 'warn');
+        return;
+      }
+      applyImportedJsonString(input.value.trim());
+      input.value = '';
+    }
+
+    // =========================================================================
     // 6. DISPATCH GENERATOR (DIVERSE MULTI-LEG 1-5 STOPS, OPEN-JAW & REGIONS)
     // =========================================================================
     const BUE_METRO = ['SADF', 'SABE', 'SAEZ'];
