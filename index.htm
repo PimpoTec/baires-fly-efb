@@ -63,36 +63,36 @@
 <body class="bg-efb-bg text-slate-100 font-sans antialiased min-h-screen flex flex-col pb-24 md:pb-8 selection:bg-orange-500/30 selection:text-orange-200">
 
   <!-- ==================== HEADER ==================== -->
-  <header class="sticky top-0 z-30 bg-efb-panel/90 backdrop-blur-xl border-b border-efb-border safe-top">
-    <div class="max-w-6xl mx-auto px-4 sm:px-6 py-2.5 flex items-center justify-between gap-2">
+  <header class="sticky top-0 z-30 bg-efb-panel/95 backdrop-blur-xl border-b border-efb-border safe-top">
+    <div class="max-w-6xl mx-auto px-3 sm:px-6 py-2.5 flex items-center justify-between gap-2">
       <!-- Brand -->
-      <div class="flex items-center gap-2.5 min-w-0">
-        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center shadow-md shadow-orange-500/20 shrink-0">
-          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+      <div class="flex items-center gap-2 sm:gap-2.5 min-w-0">
+        <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center shadow-md shadow-orange-500/20 shrink-0">
+          <svg class="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
           </svg>
         </div>
-        <div class="truncate">
+        <div class="min-w-0">
           <div class="flex items-center gap-1.5">
-            <h1 class="text-sm sm:text-base font-bold tracking-tight text-white leading-none">BAIRES FLY</h1>
-            <span class="text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded bg-orange-500/10 text-orange-400 border border-orange-500/25">EFB v4.2</span>
+            <h1 class="text-xs sm:text-base font-bold tracking-tight text-white leading-none whitespace-nowrap">BAIRES FLY</h1>
+            <span class="hidden sm:inline-block text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded bg-orange-500/10 text-orange-400 border border-orange-500/25">EFB v4.3</span>
           </div>
-          <p class="text-[11px] text-slate-400 mt-0.5 truncate">LJ35A Crew Portal • SADF</p>
+          <p class="text-[10px] sm:text-[11px] text-slate-400 mt-0.5 truncate">LJ35A • SADF</p>
         </div>
       </div>
 
       <!-- Aircraft Switcher + Install/Backup & UTC -->
-      <div class="flex items-center gap-2 shrink-0">
-        <div id="header-aircraft-switcher" class="flex items-center gap-1 bg-efb-bg p-1 rounded-xl border border-efb-border"></div>
+      <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
+        <div id="header-aircraft-switcher" class="flex items-center gap-0.5 sm:gap-1 bg-efb-bg p-1 rounded-xl border border-efb-border"></div>
 
-        <button id="header-install-btn" onclick="triggerPwaInstall()" class="hidden min-h-[38px] px-2.5 sm:px-3 py-1.5 rounded-xl bg-orange-500/15 hover:bg-orange-500/25 border border-orange-500/40 text-xs font-bold text-orange-300 transition items-center gap-1.5" title="Instalar App en tu dispositivo">
+        <button id="header-install-btn" onclick="triggerPwaInstall()" class="hidden min-h-[36px] px-2.5 sm:px-3 py-1.5 rounded-xl bg-orange-500/15 hover:bg-orange-500/25 border border-orange-500/40 text-xs font-bold text-orange-300 transition items-center gap-1.5" title="Instalar App en tu dispositivo">
           <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
           </svg>
-          <span class="hidden sm:inline">Instalar App</span>
+          <span class="hidden sm:inline">Instalar</span>
         </button>
 
-        <button onclick="openBackupModal()" class="relative min-h-[38px] px-2.5 sm:px-3 py-1.5 rounded-xl bg-efb-bg hover:bg-slate-800/80 border border-efb-border text-xs font-medium text-slate-200 transition flex items-center gap-1.5" title="Sincronización GitHub, Respaldo e Instalación">
+        <button onclick="openBackupModal()" class="relative min-h-[36px] px-2.5 sm:px-3 py-1.5 rounded-xl bg-efb-bg hover:bg-slate-800/80 border border-efb-border text-xs font-medium text-slate-200 transition flex items-center gap-1.5" title="Sincronización GitHub, Respaldo e Instalación">
           <svg class="w-4 h-4 text-sky-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
           </svg>
@@ -108,9 +108,9 @@
     </div>
 
     <!-- Minimalist Status Strip -->
-    <div class="bg-efb-bg/70 border-t border-efb-border/80">
-      <div class="max-w-6xl mx-auto px-4 sm:px-6 py-1.5 flex items-center justify-between gap-2 text-[11px] font-mono overflow-x-auto no-scrollbar">
-        <div class="flex items-center gap-x-3.5 whitespace-nowrap">
+    <div class="bg-efb-bg/80 border-t border-efb-border/80">
+      <div class="max-w-6xl mx-auto px-3 sm:px-6 py-1.5 flex items-center justify-between gap-2 text-[11px] font-mono overflow-x-auto no-scrollbar">
+        <div class="flex items-center gap-x-3 whitespace-nowrap">
           <span class="text-slate-400">POS: <strong id="strip-location" class="text-white">SADF</strong></span>
           <span class="text-slate-600">•</span>
           <span class="text-slate-400">AVIÓN: <strong id="strip-aircraft" class="text-orange-400">LV-BPA</strong></span>
@@ -124,34 +124,34 @@
         </div>
       </div>
     </div>
-
-    <!-- Responsive Navigation: Bottom Dock on Mobile/iPad, Top Tabs on Desktop -->
-    <nav class="fixed bottom-0 inset-x-0 z-40 bg-efb-panel/95 backdrop-blur-xl border-t border-efb-border safe-bottom md:static md:bg-transparent md:backdrop-blur-none md:border-t md:border-efb-border/70">
-      <div class="max-w-6xl mx-auto px-2 sm:px-6 grid grid-cols-5 md:flex md:items-center md:gap-1">
-        <button onclick="setTab('dispatch')" id="tab-dispatch" class="tab-btn min-h-[54px] md:min-h-[42px] px-1 md:px-4 py-1.5 md:py-2.5 text-[11px] md:text-sm font-medium border-t-2 md:border-t-0 md:border-b-2 transition-colors flex flex-col md:flex-row items-center justify-center gap-1 md:gap-2">
-          <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
-          <span>Despacho</span>
-        </button>
-        <button onclick="setTab('active')" id="tab-active" class="tab-btn relative min-h-[54px] md:min-h-[42px] px-1 md:px-4 py-1.5 md:py-2.5 text-[11px] md:text-sm font-medium border-t-2 md:border-t-0 md:border-b-2 transition-colors flex flex-col md:flex-row items-center justify-center gap-1 md:gap-2">
-          <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-          <span>Vuelo</span>
-          <span id="active-mission-dot" class="hidden absolute top-2 right-4 md:static w-2 h-2 rounded-full bg-orange-500 animate-pulse"></span>
-        </button>
-        <button onclick="setTab('fleet')" id="tab-fleet" class="tab-btn min-h-[54px] md:min-h-[42px] px-1 md:px-4 py-1.5 md:py-2.5 text-[11px] md:text-sm font-medium border-t-2 md:border-t-0 md:border-b-2 transition-colors flex flex-col md:flex-row items-center justify-center gap-1 md:gap-2">
-          <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
-          <span>Flota</span>
-        </button>
-        <button onclick="setTab('scenery')" id="tab-scenery" class="tab-btn min-h-[54px] md:min-h-[42px] px-1 md:px-4 py-1.5 md:py-2.5 text-[11px] md:text-sm font-medium border-t-2 md:border-t-0 md:border-b-2 transition-colors flex flex-col md:flex-row items-center justify-center gap-1 md:gap-2">
-          <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-          <span class="flex items-center gap-1">Escenarios <span id="scenery-badge" class="hidden sm:inline text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-efb-bg border border-efb-border text-emerald-400">46/46</span></span>
-        </button>
-        <button onclick="setTab('logbook')" id="tab-logbook" class="tab-btn min-h-[54px] md:min-h-[42px] px-1 md:px-4 py-1.5 md:py-2.5 text-[11px] md:text-sm font-medium border-t-2 md:border-t-0 md:border-b-2 transition-colors flex flex-col md:flex-row items-center justify-center gap-1 md:gap-2">
-          <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
-          <span class="flex items-center gap-1">Bitácora <span id="logbook-badge" class="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-efb-bg border border-efb-border text-slate-300">0</span></span>
-        </button>
-      </div>
-    </nav>
   </header>
+
+  <!-- Responsive Navigation: True Bottom Dock on Mobile/iPad, Top Tabs on Desktop -->
+  <nav class="fixed bottom-0 inset-x-0 z-40 bg-efb-panel/95 backdrop-blur-xl border-t border-efb-border safe-bottom md:sticky md:top-[84px] md:bottom-auto md:z-20 md:border-t-0 md:border-b">
+    <div class="max-w-6xl mx-auto px-1 sm:px-6 grid grid-cols-5 md:flex md:items-center md:gap-1">
+      <button onclick="setTab('dispatch')" id="tab-dispatch" class="tab-btn min-h-[56px] md:min-h-[42px] px-1 md:px-4 py-1.5 md:py-2.5 text-[10px] sm:text-[11px] md:text-sm font-medium border-t-2 md:border-t-0 md:border-b-2 transition-colors flex flex-col md:flex-row items-center justify-center gap-1 md:gap-2">
+        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+        <span>Despacho</span>
+      </button>
+      <button onclick="setTab('active')" id="tab-active" class="tab-btn relative min-h-[56px] md:min-h-[42px] px-1 md:px-4 py-1.5 md:py-2.5 text-[10px] sm:text-[11px] md:text-sm font-medium border-t-2 md:border-t-0 md:border-b-2 transition-colors flex flex-col md:flex-row items-center justify-center gap-1 md:gap-2">
+        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+        <span>Vuelo</span>
+        <span id="active-mission-dot" class="hidden absolute top-2 right-3 md:static w-2 h-2 rounded-full bg-orange-500 animate-pulse"></span>
+      </button>
+      <button onclick="setTab('fleet')" id="tab-fleet" class="tab-btn min-h-[56px] md:min-h-[42px] px-1 md:px-4 py-1.5 md:py-2.5 text-[10px] sm:text-[11px] md:text-sm font-medium border-t-2 md:border-t-0 md:border-b-2 transition-colors flex flex-col md:flex-row items-center justify-center gap-1 md:gap-2">
+        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
+        <span>Flota</span>
+      </button>
+      <button onclick="setTab('scenery')" id="tab-scenery" class="tab-btn min-h-[56px] md:min-h-[42px] px-1 md:px-4 py-1.5 md:py-2.5 text-[10px] sm:text-[11px] md:text-sm font-medium border-t-2 md:border-t-0 md:border-b-2 transition-colors flex flex-col md:flex-row items-center justify-center gap-1 md:gap-2">
+        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+        <span class="flex items-center gap-1">Escenarios <span id="scenery-badge" class="hidden sm:inline text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-efb-bg border border-efb-border text-emerald-400">46/46</span></span>
+      </button>
+      <button onclick="setTab('logbook')" id="tab-logbook" class="tab-btn min-h-[56px] md:min-h-[42px] px-1 md:px-4 py-1.5 md:py-2.5 text-[10px] sm:text-[11px] md:text-sm font-medium border-t-2 md:border-t-0 md:border-b-2 transition-colors flex flex-col md:flex-row items-center justify-center gap-1 md:gap-2">
+        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
+        <span class="flex items-center gap-1">Bitácora <span id="logbook-badge" class="hidden sm:inline text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-efb-bg border border-efb-border text-slate-300">0</span></span>
+      </button>
+    </div>
+  </nav>
 
   <!-- ==================== MAIN CONTENT ==================== -->
   <main class="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-5 space-y-5">
@@ -218,14 +218,14 @@
               <span id="time-display" class="font-mono text-base font-bold text-orange-400">3.0 hs</span>
             </div>
             <input id="time-slider" type="range" min="0.75" max="14" step="0.25" value="3" oninput="updateTimeDisplay(this.value)" onchange="generateDispatches()" class="w-full h-2 accent-orange-500 cursor-pointer" />
-            <div class="flex flex-wrap gap-1.5 pt-0.5">
-              <button onclick="setTimePreset(0.75, false)" class="min-h-[36px] px-3 py-1.5 rounded-xl text-xs font-mono bg-efb-bg hover:bg-slate-800 border border-efb-border text-slate-300 transition">45m</button>
-              <button onclick="setTimePreset(1.5, false)" class="min-h-[36px] px-3 py-1.5 rounded-xl text-xs font-mono bg-efb-bg hover:bg-slate-800 border border-efb-border text-slate-300 transition">1.5h</button>
-              <button onclick="setTimePreset(2, false)" class="min-h-[36px] px-3 py-1.5 rounded-xl text-xs font-mono bg-efb-bg hover:bg-slate-800 border border-efb-border text-slate-300 transition">2h</button>
-              <button onclick="setTimePreset(3, false)" class="min-h-[36px] px-3 py-1.5 rounded-xl text-xs font-mono bg-efb-bg hover:bg-slate-800 border border-efb-border text-slate-300 transition">3h</button>
-              <button onclick="setTimePreset(4, false)" class="min-h-[36px] px-3 py-1.5 rounded-xl text-xs font-mono bg-efb-bg hover:bg-slate-800 border border-efb-border text-slate-300 transition">4h</button>
-              <button onclick="setTimePreset(6, false)" class="min-h-[36px] px-3 py-1.5 rounded-xl text-xs font-mono bg-efb-bg hover:bg-slate-800 border border-efb-border text-slate-300 transition">6h</button>
-              <button onclick="setTimePreset(12, true)" class="min-h-[36px] px-3 py-1.5 rounded-xl text-xs font-mono bg-orange-500/15 hover:bg-orange-500/25 border border-orange-500/40 text-orange-300 transition">EE.UU.</button>
+            <div class="grid grid-cols-4 sm:flex sm:flex-wrap gap-1.5 pt-0.5">
+              <button onclick="setTimePreset(0.75, false)" class="min-h-[38px] px-2.5 py-1.5 rounded-xl text-xs font-mono bg-efb-bg hover:bg-slate-800 border border-efb-border text-slate-300 transition">45m</button>
+              <button onclick="setTimePreset(1.5, false)" class="min-h-[38px] px-2.5 py-1.5 rounded-xl text-xs font-mono bg-efb-bg hover:bg-slate-800 border border-efb-border text-slate-300 transition">1.5h</button>
+              <button onclick="setTimePreset(2, false)" class="min-h-[38px] px-2.5 py-1.5 rounded-xl text-xs font-mono bg-efb-bg hover:bg-slate-800 border border-efb-border text-slate-300 transition">2h</button>
+              <button onclick="setTimePreset(3, false)" class="min-h-[38px] px-2.5 py-1.5 rounded-xl text-xs font-mono bg-efb-bg hover:bg-slate-800 border border-efb-border text-slate-300 transition">3h</button>
+              <button onclick="setTimePreset(4, false)" class="min-h-[38px] px-2.5 py-1.5 rounded-xl text-xs font-mono bg-efb-bg hover:bg-slate-800 border border-efb-border text-slate-300 transition">4h</button>
+              <button onclick="setTimePreset(6, false)" class="min-h-[38px] px-2.5 py-1.5 rounded-xl text-xs font-mono bg-efb-bg hover:bg-slate-800 border border-efb-border text-slate-300 transition">6h</button>
+              <button onclick="setTimePreset(12, true)" class="col-span-2 sm:col-span-1 min-h-[38px] px-3 py-1.5 rounded-xl text-xs font-mono bg-orange-500/15 hover:bg-orange-500/25 border border-orange-500/40 text-orange-300 transition">EE.UU.</button>
             </div>
           </div>
 
@@ -722,41 +722,43 @@
     // =========================================================================
     // 3. PWA NATIVE ICON, MANIFEST & INSTALL PROMPT
     // =========================================================================
-    function generatePngAppIconDataUrl() {
+    function generatePngAppIconDataUrl(size) {
+      const dim = size || 512;
       try {
         const canvas = document.createElement('canvas');
-        canvas.width = 512;
-        canvas.height = 512;
+        canvas.width = dim;
+        canvas.height = dim;
         const ctx = canvas.getContext('2d');
+        const s = dim / 512;
 
         ctx.fillStyle = '#090d14';
-        ctx.fillRect(0, 0, 512, 512);
+        ctx.fillRect(0, 0, dim, dim);
 
         ctx.fillStyle = '#101622';
         ctx.beginPath();
-        ctx.roundRect(36, 36, 440, 440, 96);
+        ctx.roundRect(36 * s, 36 * s, 440 * s, 440 * s, 96 * s);
         ctx.fill();
 
         ctx.strokeStyle = '#f97316';
-        ctx.lineWidth = 12;
+        ctx.lineWidth = Math.max(4, 12 * s);
         ctx.stroke();
 
-        const grad = ctx.createLinearGradient(140, 120, 372, 370);
+        const grad = ctx.createLinearGradient(140 * s, 120 * s, 372 * s, 370 * s);
         grad.addColorStop(0, '#fb923c');
         grad.addColorStop(1, '#ea580c');
         ctx.fillStyle = grad;
         ctx.beginPath();
-        ctx.moveTo(256, 110);
-        ctx.lineTo(382, 355);
-        ctx.lineTo(256, 305);
-        ctx.lineTo(130, 355);
+        ctx.moveTo(256 * s, 110 * s);
+        ctx.lineTo(382 * s, 355 * s);
+        ctx.lineTo(256 * s, 305 * s);
+        ctx.lineTo(130 * s, 355 * s);
         ctx.closePath();
         ctx.fill();
 
         ctx.fillStyle = '#f8fafc';
-        ctx.font = '700 34px monospace';
+        ctx.font = `700 ${Math.round(34 * s)}px monospace`;
         ctx.textAlign = 'center';
-        ctx.fillText('BAIRES FLY', 256, 422);
+        ctx.fillText('BAIRES FLY', 256 * s, 422 * s);
 
         return canvas.toDataURL('image/png');
       } catch (e) {
@@ -765,28 +767,34 @@
     }
 
     function setupPwaAssets() {
-      const pngIconUrl = generatePngAppIconDataUrl();
-      if (pngIconUrl) {
+      const icon192 = generatePngAppIconDataUrl(192);
+      const icon512 = generatePngAppIconDataUrl(512);
+      if (icon512) {
         const appleLink = document.getElementById('apple-touch-icon-link');
         const favLink = document.getElementById('favicon-link');
-        if (appleLink) appleLink.href = pngIconUrl;
-        if (favLink) favLink.href = pngIconUrl;
+        if (appleLink) appleLink.href = icon512;
+        if (favLink) favLink.href = icon192 || icon512;
       }
 
       try {
+        const pageUrl = window.location.href.split('#')[0].split('?')[0];
+        const scopeUrl = new URL('.', pageUrl).href;
+        const icons = [];
+        if (icon192) icons.push({ src: icon192, sizes: '192x192', type: 'image/png', purpose: 'any' });
+        if (icon512) icons.push({ src: icon512, sizes: '512x512', type: 'image/png', purpose: 'any maskable' });
+
         const manifest = {
+          id: pageUrl,
           name: 'Baires Fly — Pilot EFB',
           short_name: 'Baires Fly',
           description: 'Crew Dispatch & Learjet 35A EFB para MSFS 2024',
-          start_url: '.',
-          scope: '.',
+          start_url: pageUrl,
+          scope: scopeUrl,
           display: 'standalone',
           orientation: 'any',
           background_color: '#090d14',
           theme_color: '#090d14',
-          icons: pngIconUrl
-            ? [{ src: pngIconUrl, sizes: '512x512', type: 'image/png', purpose: 'any maskable' }]
-            : []
+          icons
         };
         const dataUri = 'data:application/manifest+json;charset=utf-8,' + encodeURIComponent(JSON.stringify(manifest));
         const link = document.getElementById('pwa-manifest-link');
@@ -811,9 +819,10 @@
     window.addEventListener('beforeinstallprompt', e => {
       e.preventDefault();
       deferredInstallPrompt = e;
+      const isMobileWidth = window.innerWidth < 640;
       const hdrBtn = document.getElementById('header-install-btn');
       const modalBtn = document.getElementById('modal-native-install-btn');
-      if (hdrBtn) {
+      if (hdrBtn && !isMobileWidth) {
         hdrBtn.classList.remove('hidden');
         hdrBtn.classList.add('flex');
       }
@@ -2678,7 +2687,7 @@
           .map(reg => {
             const active = state.activeReg === reg;
             return `
-              <button onclick="switchAircraft('${reg}')" class="px-2.5 py-1 rounded-lg font-mono text-xs font-bold transition flex items-center gap-1 ${
+              <button onclick="switchAircraft('${reg}')" class="px-2 sm:px-2.5 py-1 rounded-lg font-mono text-[11px] sm:text-xs font-bold transition flex items-center gap-1 ${
                 active
                   ? 'bg-orange-500 text-white shadow'
                   : canSwitch
