@@ -75,7 +75,7 @@
         <div class="truncate">
           <div class="flex items-center gap-1.5">
             <h1 class="text-sm sm:text-base font-bold tracking-tight text-white leading-none">BAIRES FLY</h1>
-            <span class="text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded bg-orange-500/10 text-orange-400 border border-orange-500/25">EFB v4.1</span>
+            <span class="text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded bg-orange-500/10 text-orange-400 border border-orange-500/25">EFB v4.2</span>
           </div>
           <p class="text-[11px] text-slate-400 mt-0.5 truncate">LJ35A Crew Portal • SADF</p>
         </div>
@@ -368,7 +368,7 @@
       <div class="flex items-start justify-between gap-3 border-b border-efb-border pb-4">
         <div>
           <div class="flex items-center gap-2">
-            <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-sky-500/15 text-sky-300 border border-sky-500/35">PWA v4.1 • LOCAL + GITHUB</span>
+            <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-sky-500/15 text-sky-300 border border-sky-500/35">PWA v4.2 • LOCAL + GITHUB</span>
             <span id="backup-cloud-badge" class="text-[10px] font-mono px-2 py-0.5 rounded bg-efb-bg border border-efb-border text-slate-400">Listo</span>
           </div>
           <h3 class="text-base sm:text-lg font-bold text-white mt-1">App Instalable, GitHub Sync y Respaldo</h3>
@@ -393,14 +393,14 @@
         </p>
       </div>
 
-      <!-- GitHub Gist Multi-Device Sync (Works on GitHub Pages!) -->
+      <!-- GitHub Gist Multi-Device Sync -->
       <div class="bg-efb-bg border border-efb-border rounded-xl p-3.5 space-y-2.5">
         <div class="flex items-center justify-between gap-2">
           <span class="text-xs font-bold text-white">Sincronización Automática vía GitHub Gist</span>
           <span id="gist-sync-indicator" class="text-[10px] font-mono text-slate-400">No vinculado</span>
         </div>
         <p class="text-[11px] text-slate-400 leading-relaxed">
-          Pegá un <strong>GitHub Personal Access Token</strong> (con permiso <span class="font-mono text-slate-200">gist</span>) para sincronizar automáticamente tu flota y bitácora entre la PC, el iPad y el celular. Si dejás el Gist ID vacío, se crea uno nuevo automáticamente.
+          Pegá un <strong>GitHub Personal Access Token (classic)</strong> (empieza con <span class="font-mono text-slate-200">ghp_</span> y tiene permiso <span class="font-mono text-slate-200">gist</span>) para sincronizar automáticamente tu flota y bitácora entre la PC, el iPad y el celular. Dejá el Gist ID vacío para crearlo automáticamente.
         </p>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
           <input id="gist-token-input" type="password" placeholder="ghp_xxxxxxxxxxxx (Token GitHub)" class="min-h-[40px] bg-efb-panel border border-efb-border rounded-xl px-3 py-1.5 text-xs font-mono text-white placeholder-slate-500 focus:outline-none focus:border-sky-500" />
@@ -729,11 +729,9 @@
         canvas.height = 512;
         const ctx = canvas.getContext('2d');
 
-        // Background
         ctx.fillStyle = '#090d14';
         ctx.fillRect(0, 0, 512, 512);
 
-        // Subtle inner card
         ctx.fillStyle = '#101622';
         ctx.beginPath();
         ctx.roundRect(36, 36, 440, 440, 96);
@@ -743,7 +741,6 @@
         ctx.lineWidth = 12;
         ctx.stroke();
 
-        // Stylized Aircraft Delta Silhouette
         const grad = ctx.createLinearGradient(140, 120, 372, 370);
         grad.addColorStop(0, '#fb923c');
         grad.addColorStop(1, '#ea580c');
@@ -756,7 +753,6 @@
         ctx.closePath();
         ctx.fill();
 
-        // Subtle Monogram
         ctx.fillStyle = '#f8fafc';
         ctx.font = '700 34px monospace';
         ctx.textAlign = 'center';
@@ -797,7 +793,6 @@
         if (link) link.href = dataUri;
       } catch (e) {}
 
-      // Show mobile/iPad install banner if running inside browser and not standalone
       const isStandalone = window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
       const isMobileOrTablet = /iPad|iPhone|iPod|Android/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
       const dismissed = sessionStorage.getItem('bf_install_banner_dismissed') === '1';
@@ -851,7 +846,6 @@
     // =========================================================================
     function sanitizeGitHubToken(raw) {
       let t = String(raw || '').trim().replace(/\s+/g, '');
-      // Fix accidental double-paste of ghp_ / github_pat_ tokens
       const ghpMatches = t.match(/ghp_[A-Za-z0-9]{36}/g);
       if (ghpMatches && ghpMatches.length > 0) return ghpMatches[0];
       const patMatches = t.match(/github_pat_[A-Za-z0-9_]{20,}/g);
@@ -898,7 +892,7 @@
       try {
         const res = await fetch('https://api.github.com/gists?per_page=30', {
           headers: {
-            Authorization: `token ${token}`,
+            Authorization: `Bearer ${token}`,
             Accept: 'application/vnd.github+json'
           }
         });
@@ -936,6 +930,9 @@
       const creds = getGistCreds();
       if (!creds.token) return;
 
+      const errBox = document.getElementById('gist-error-box');
+      if (errBox) errBox.classList.add('hidden');
+
       let targetGistId = creds.gistId;
       if (!targetGistId) {
         targetGistId = await findExistingBairesFlyGist(creds.token);
@@ -957,18 +954,23 @@
           res = await fetch(`https://api.github.com/gists/${targetGistId}`, {
             method: 'PATCH',
             headers: {
-              Authorization: `token ${creds.token}`,
+              Authorization: `Bearer ${creds.token}`,
               Accept: 'application/vnd.github+json',
               'Content-Type': 'application/json'
             },
             body: JSON.stringify(body)
           });
-        } else {
+          if (res.status === 404) {
+            targetGistId = '';
+          }
+        }
+
+        if (!targetGistId) {
           body.public = false;
           res = await fetch('https://api.github.com/gists', {
             method: 'POST',
             headers: {
-              Authorization: `token ${creds.token}`,
+              Authorization: `Bearer ${creds.token}`,
               Accept: 'application/vnd.github+json',
               'Content-Type': 'application/json'
             },
@@ -1000,9 +1002,82 @@
       } catch (err) {
         if (!silent) {
           const msg = err && err.message ? err.message : 'Error de red';
-          showToast(`Error GitHub (${msg}). Verificá que estés en tu web de GitHub Pages y no en Preview.`, 'error');
+          if (errBox) {
+            errBox.innerHTML = `<strong>Error GitHub (${msg}):</strong><br/>• Asegurate de usar un <strong>Token (classic)</strong> (empieza con <code>ghp_</code>) con la casilla <code>gist</code> tildada.<br/>• Si pusiste algo en el casillero <em>Gist ID</em>, borralo y dejalo vacío.`;
+            errBox.classList.remove('hidden');
+          }
+          showToast(`Error GitHub (${msg}). Revisá el detalle en el panel.`, 'error');
         }
       }
+    }
+
+    async function pullFromGist(silent) {
+      const tokenInput = document.getElementById('gist-token-input');
+      const idInput = document.getElementById('gist-id-input');
+      const existing = getGistCreds();
+      const token = sanitizeGitHubToken(tokenInput ? tokenInput.value : existing.token);
+      let gistId = sanitizeGistId(idInput ? idInput.value : existing.gistId);
+
+      if (!token) {
+        if (!silent) showToast('Ingresá tu Token de GitHub primero.', 'warn');
+        return;
+      }
+      if (!gistId) {
+        gistId = await findExistingBairesFlyGist(token);
+      }
+      if (!gistId) {
+        if (!silent) showToast('No se encontró ningún Gist previo. Tocá "Vincular y Subir a GitHub" primero.', 'warn');
+        return;
+      }
+
+      try {
+        const res = await fetch(`https://api.github.com/gists/${gistId}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/vnd.github+json'
+          }
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        const fileObj = data && data.files && data.files['baires_fly_efb_state.json'];
+        if (!fileObj || !fileObj.content) throw new Error('Archivo de estado vacío');
+
+        const parsed = JSON.parse(fileObj.content);
+        const migrated = migrateState(parsed);
+        migrated.hasUnsavedBackupChanges = false;
+        state = migrated;
+        saveLocalState();
+        saveGistCreds(token, gistId);
+        if (tokenInput) tokenInput.value = token;
+        if (idInput) idInput.value = gistId;
+        updateSyncIndicators(`GIST ${gistId.slice(0, 6)}`, true);
+
+        syncControlsFromState();
+        renderAll();
+        generateDispatches();
+        if (!silent) showToast('Estado descargado y sincronizado desde GitHub.', 'success');
+      } catch (err) {
+        if (!silent) {
+          showToast(`No se pudo descargar desde GitHub (${err.message || 'error'}).`, 'error');
+        }
+      }
+    }
+
+    async function connectAndPushGist() {
+      const tokenInput = document.getElementById('gist-token-input');
+      const idInput = document.getElementById('gist-id-input');
+      const token = sanitizeGitHubToken(tokenInput ? tokenInput.value : '');
+      const gistId = sanitizeGistId(idInput ? idInput.value : '');
+
+      if (!token) {
+        showToast('Pegá tu GitHub Personal Access Token (ghp_...).', 'warn');
+        return;
+      }
+      if (tokenInput) tokenInput.value = token;
+      if (idInput) idInput.value = gistId;
+
+      saveGistCreds(token, gistId);
+      await pushToGist(false);
     }
 
     function scheduleGistPush() {
@@ -1014,146 +1089,70 @@
       }, 1500);
     }
 
-    async function pullFromGist(silent) {
-      const creds = getGistCreds();
-      if (!creds.token) {
-        if (!silent) showToast('Ingresá tu Token de GitHub para descargar el estado.', 'warn');
-        return;
-      }
-
-      let targetGistId = creds.gistId;
-      if (!targetGistId) {
-        targetGistId = await findExistingBairesFlyGist(creds.token);
-        if (targetGistId) {
-          saveGistCreds(creds.token, targetGistId);
-          const idInput = document.getElementById('gist-id-input');
-          if (idInput) idInput.value = targetGistId;
-        }
-      }
-
-      if (!targetGistId) {
-        if (!silent) showToast('No se encontró un respaldo previo. Tocá "Vincular y Subir a GitHub".', 'warn');
-        return;
-      }
-
-      try {
-        const res = await fetch(`https://api.github.com/gists/${targetGistId}`, {
-          headers: {
-            Authorization: `token ${creds.token}`,
-            Accept: 'application/vnd.github+json'
-          }
-        });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
-        const fileObj = data.files && data.files['baires_fly_efb_state.json'];
-        if (fileObj && fileObj.content) {
-          const parsed = JSON.parse(fileObj.content);
-          const remoteState = migrateState(parsed);
-          const localTime = Date.parse(state.updatedAt || 0);
-          const remoteTime = Date.parse(remoteState.updatedAt || 0);
-
-          if (!silent || remoteTime > localTime) {
-            remoteState.hasUnsavedBackupChanges = false;
-            state = remoteState;
-            saveLocalState();
-            syncControlsWithState();
-            renderAll();
-            generateDispatches();
-            if (!silent) showToast(`Estado descargado desde GitHub (${state.logbook.length} vuelos).`, 'success');
-          }
-          updateSyncIndicators(`GIST ${targetGistId.slice(0, 6)}`, true);
-        }
-      } catch (err) {
-        if (!silent) showToast(`No se pudo descargar desde GitHub (${err.message || 'Error'}).`, 'error');
-      }
-    }
-
-    async function connectAndPushGist() {
-      const rawToken = document.getElementById('gist-token-input')?.value || '';
-      const rawId = document.getElementById('gist-id-input')?.value || '';
-      const cleanToken = sanitizeGitHubToken(rawToken);
-      const cleanId = sanitizeGistId(rawId);
-
-      if (!cleanToken) {
-        showToast('Pegá primero tu GitHub Personal Access Token.', 'warn');
-        return;
-      }
-      const tokEl = document.getElementById('gist-token-input');
-      const idEl = document.getElementById('gist-id-input');
-      if (tokEl) tokEl.value = cleanToken;
-      if (idEl) idEl.value = cleanId;
-
-      saveGistCreds(cleanToken, cleanId);
-      await pushToGist(false);
-    }
-
     function copyMagicSyncLink() {
       const creds = getGistCreds();
-      if (!creds.token) {
-        showToast('Primero vinculá tu Token con "Vincular y Subir a GitHub".', 'warn');
+      if (!creds.token || !creds.gistId) {
+        showToast('Primero vinculá tu cuenta con "Vincular y Subir a GitHub".', 'warn');
         return;
       }
       const baseUrl = window.location.href.split('#')[0].split('?')[0];
-      const magicUrl = `${baseUrl}#sync=${encodeURIComponent(creds.token)}${creds.gistId ? `&gist=${encodeURIComponent(creds.gistId)}` : ''}`;
-      copyText(magicUrl);
-      showToast('Link Mágico copiado. Abrilo en tu iPad o celular para vincularlo solo.', 'success');
+      const magicUrl = `${baseUrl}#sync=${encodeURIComponent(creds.token)}:${encodeURIComponent(creds.gistId)}`;
+      copyText(magicUrl, 'Link Mágico para iPad / Celular');
     }
 
-    function checkMagicSyncHash() {
-      try {
-        const hash = window.location.hash || '';
-        if (!hash.includes('sync=')) return false;
-        const params = new URLSearchParams(hash.replace(/^#/, ''));
-        const tok = sanitizeGitHubToken(params.get('sync') || '');
-        const gid = sanitizeGistId(params.get('gist') || '');
-        if (tok) {
-          saveGistCreds(tok, gid);
+    async function checkMagicLinkOnBoot() {
+      const hash = window.location.hash || '';
+      if (!hash.startsWith('#sync=')) return false;
+      const raw = decodeURIComponent(hash.slice(6));
+      const parts = raw.split(':');
+      if (parts.length >= 2 && parts[0] && parts[1]) {
+        saveGistCreds(parts[0], parts[1]);
+        try {
           history.replaceState(null, '', window.location.pathname + window.location.search);
-          return true;
-        }
-      } catch (e) {}
+        } catch (e) {}
+        await pullFromGist(false);
+        return true;
+      }
       return false;
     }
 
     function buildBackupPayload() {
       return {
-        app: 'BairesFlyEFB',
+        app: 'Baires Fly Pilot EFB',
         schemaVersion: SCHEMA_VERSION,
         exportedAt: new Date().toISOString(),
-        state: JSON.parse(JSON.stringify(state))
+        state: Object.assign({}, state, { hasUnsavedBackupChanges: false })
       };
     }
 
     function openBackupModal() {
-      const bpa = state.fleet['LV-BPA'];
-      const iyq = state.fleet['LV-IYQ'];
-      const totalHrs = (bpa.totalHours + iyq.totalHours).toFixed(1);
-      const enabledCount = Object.keys(AIRPORTS).filter(isSceneryEnabled).length;
-
-      document.getElementById('backup-snapshot-summary').innerHTML = `
-        <div>
-          <span class="text-[10px] text-slate-500 block">FLOTA</span>
-          <span class="text-white font-bold block">BPA: ${bpa.location}</span>
-          <span class="text-slate-300 text-[11px]">IYQ: ${iyq.location}</span>
-        </div>
-        <div>
-          <span class="text-[10px] text-slate-500 block">BITÁCORA</span>
-          <span class="text-orange-400 font-bold block">${state.logbook.length} vuelos</span>
-          <span class="text-slate-300 text-[11px]">${totalHrs} hs totales</span>
-        </div>
-        <div>
-          <span class="text-[10px] text-slate-500 block">ESCENARIOS</span>
-          <span class="text-emerald-400 font-bold block">${enabledCount}/${Object.keys(AIRPORTS).length}</span>
-          <span class="text-slate-400 text-[10px] truncate block">${state.lastBackupAt ? `Sync: ${state.lastBackupAt.slice(11, 16)}Z` : 'Guardado local'}</span>
-        </div>
-      `;
-
       const creds = getGistCreds();
-      const tokEl = document.getElementById('gist-token-input');
-      const idEl = document.getElementById('gist-id-input');
-      if (tokEl) tokEl.value = creds.token || '';
-      if (idEl) idEl.value = creds.gistId || '';
+      const tokenInput = document.getElementById('gist-token-input');
+      const idInput = document.getElementById('gist-id-input');
+      const errBox = document.getElementById('gist-error-box');
+      if (errBox) errBox.classList.add('hidden');
+      if (tokenInput) tokenInput.value = creds.token || '';
+      if (idInput) idInput.value = creds.gistId || '';
 
+      const totalHrs = (state.fleet['LV-BPA'].totalHours + state.fleet['LV-IYQ'].totalHours).toFixed(1);
+      const enabledCount = Object.values(state.enabledSceneries).filter(Boolean).length;
+      const summaryEl = document.getElementById('backup-snapshot-summary');
+      if (summaryEl) {
+        summaryEl.innerHTML = `
+          <div>
+            <span class="text-[10px] text-slate-400 block">BITÁCORA</span>
+            <strong class="text-white">${state.logbook.length} tramos</strong>
+          </div>
+          <div>
+            <span class="text-[10px] text-slate-400 block">HORAS FLOTA</span>
+            <strong class="text-orange-400">${totalHrs} hs</strong>
+          </div>
+          <div>
+            <span class="text-[10px] text-slate-400 block">ESCENARIOS</span>
+            <strong class="text-emerald-400">${enabledCount}/${Object.keys(AIRPORTS).length}</strong>
+          </div>
+        `;
+      }
       document.getElementById('backup-modal').classList.remove('hidden');
     }
 
@@ -1167,64 +1166,43 @@
       const blob = new Blob([jsonStr], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
-      const dateTag = new Date().toISOString().slice(0, 10);
+      const stamp = new Date().toISOString().slice(0, 10);
       a.href = url;
-      a.download = `bairesfly-respaldo-${dateTag}.json`;
+      a.download = `baires-fly-backup-${stamp}.json`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
 
-      state.lastBackupAt = new Date().toISOString();
       state.hasUnsavedBackupChanges = false;
+      state.lastBackupAt = new Date().toISOString();
       saveLocalState();
       updateBackupBadge();
-      openBackupModal();
-      showToast('Archivo .JSON descargado correctamente.', 'success');
+      showToast('Archivo de respaldo .JSON descargado.', 'success');
     }
 
     function copyBackupToClipboard() {
-      const payload = buildBackupPayload();
-      const compact = JSON.stringify(payload);
-      const ta = document.createElement('textarea');
-      ta.value = compact;
-      ta.style.position = 'fixed';
-      ta.style.opacity = '0';
-      document.body.appendChild(ta);
-      ta.select();
-      try {
-        document.execCommand('copy');
-        state.lastBackupAt = new Date().toISOString();
-        state.hasUnsavedBackupChanges = false;
-        saveLocalState();
-        updateBackupBadge();
-        showToast('Código de respaldo copiado al portapapeles.', 'success');
-      } catch (e) {
-        showToast('No se pudo copiar automáticamente. Usá Descargar .JSON.', 'warn');
-      }
-      document.body.removeChild(ta);
+      const jsonStr = JSON.stringify(buildBackupPayload());
+      copyText(jsonStr, 'Respaldo JSON');
+      state.hasUnsavedBackupChanges = false;
+      saveLocalState();
+      updateBackupBadge();
     }
 
     function applyImportedJsonString(rawStr) {
       try {
         const parsed = JSON.parse(rawStr);
-        if (!parsed || typeof parsed !== 'object' || (!parsed.fleet && !(parsed.state && parsed.state.fleet))) {
-          showToast('El archivo o texto no corresponde a un respaldo válido de Baires Fly.', 'error');
-          return;
-        }
-        const restored = migrateState(parsed);
-        restored.hasUnsavedBackupChanges = false;
-        state = restored;
-
-        syncControlsWithState();
-        saveState();
+        const migrated = migrateState(parsed);
+        migrated.hasUnsavedBackupChanges = false;
+        state = migrated;
+        saveState(false);
+        syncControlsFromState();
         renderAll();
         generateDispatches();
-        setTab(state.activeMission ? 'active' : 'dispatch');
         closeBackupModal();
-        showToast(`Respaldo restaurado (${state.logbook.length} vuelos).`, 'success');
-      } catch (err) {
-        showToast('Error al leer el JSON de respaldo.', 'error');
+        showToast(`Respaldo restaurado (${state.logbook.length} vuelos en bitácora).`, 'success');
+      } catch (e) {
+        showToast('El archivo o texto JSON no es válido.', 'error');
       }
     }
 
@@ -1240,464 +1218,646 @@
     }
 
     function importBackupFromText() {
-      const input = document.getElementById('backup-paste-input');
-      const val = (input.value || '').trim();
-      if (!val) {
-        showToast('Pegá el código JSON de respaldo antes de restaurar.', 'warn');
+      const inp = document.getElementById('backup-paste-input');
+      const txt = inp ? inp.value.trim() : '';
+      if (!txt) {
+        showToast('Pegá el código JSON antes de restaurar.', 'warn');
         return;
       }
-      applyImportedJsonString(val);
-      input.value = '';
+      applyImportedJsonString(txt);
+      if (inp) inp.value = '';
     }
 
     // =========================================================================
-    // 5. AVIATION & PERFORMANCE CALCULATORS (LEARJET 35A)
+    // 5. AVIATION MATH, LEARJET 35A PERFORMANCE & SIMBRIEF
     // =========================================================================
-    function isSceneryEnabled(icao) {
-      if (icao === 'SADF') return true;
-      return state.enabledSceneries[icao] !== false;
-    }
-
-    function toRad(deg) {
-      return (deg * Math.PI) / 180;
-    }
-
-    function calcDistanceNM(origIcao, destIcao) {
-      const a = AIRPORTS[origIcao];
-      const b = AIRPORTS[destIcao];
-      if (!a || !b) return 100;
-      const R = 3440.065;
+    function calcDistanceNM(icaoA, icaoB) {
+      const a = AIRPORTS[icaoA];
+      const b = AIRPORTS[icaoB];
+      if (!a || !b) return 0;
+      const toRad = deg => (deg * Math.PI) / 180;
+      const R = 3440.065; // Earth radius in NM
       const dLat = toRad(b.lat - a.lat);
       const dLon = toRad(b.lon - a.lon);
       const lat1 = toRad(a.lat);
       const lat2 = toRad(b.lat);
-      const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
-      const gc = 2 * R * Math.asin(Math.sqrt(h));
-      return Math.max(25, Math.round(gc * 1.08));
+      const h =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      const c = 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+      return Math.round(R * c);
     }
 
-    function calcBearing(origIcao, destIcao) {
-      const a = AIRPORTS[origIcao];
-      const b = AIRPORTS[destIcao];
+    function calcBearing(icaoA, icaoB) {
+      const a = AIRPORTS[icaoA];
+      const b = AIRPORTS[icaoB];
       if (!a || !b) return 0;
+      const toRad = d => (d * Math.PI) / 180;
+      const toDeg = r => (r * 180) / Math.PI;
       const lat1 = toRad(a.lat);
       const lat2 = toRad(b.lat);
       const dLon = toRad(b.lon - a.lon);
       const y = Math.sin(dLon) * Math.cos(lat2);
       const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
-      return (Math.round((Math.atan2(y, x) * 180) / Math.PI) + 360) % 360;
+      return (Math.round(toDeg(Math.atan2(y, x))) + 360) % 360;
     }
 
     function calcEETMin(distNM) {
-      const cruiseKt = distNM < 180 ? 375 : 435;
-      return Math.max(20, Math.round((distNM / cruiseKt) * 60 + 14));
+      // Learjet 35A realistic block-to-block profile including climb/descent
+      const cruiseKt = distNM < 180 ? 330 : distNM < 450 ? 410 : 445;
+      const airMin = Math.round((distNM / cruiseKt) * 60 + 14);
+      return Math.max(22, airMin);
     }
 
-    function calcRVSMFlightLevel(origIcao, destIcao, distNM) {
-      const brg = calcBearing(origIcao, destIcao);
-      const isEast = brg >= 0 && brg < 180;
-      if (distNM < 130) return isEast ? 'FL190' : 'FL200';
+    function calcRVSMFlightLevel(icaoA, icaoB, distNM) {
+      const hdg = calcBearing(icaoA, icaoB);
+      const isEast = hdg >= 0 && hdg < 180;
+      if (distNM < 140) return isEast ? 'FL190' : 'FL200';
       if (distNM < 320) return isEast ? 'FL290' : 'FL300';
-      if (distNM < 700) return isEast ? 'FL370' : 'FL380';
-      return isEast ? 'FL410' : 'FL430';
+      if (distNM < 650) return isEast ? 'FL350' : 'FL360';
+      return isEast ? 'FL390' : 'FL410';
     }
 
-    function calcFuelLbs(eetMin) {
-      const hrs = eetMin / 60;
-      const trip = Math.round(hrs * 1240);
-      const reserve = 1350;
-      return Math.min(6200, Math.max(2200, trip + reserve));
-    }
+    function calcLearjetPerformance(fromIcao, toIcao, distNM, eetMin, paxCount, isMedevac) {
+      const orig = AIRPORTS[fromIcao];
+      const dest = AIRPORTS[toIcao];
 
-    function formatMin(totalMin) {
-      const h = Math.floor(totalMin / 60);
-      const m = totalMin % 60;
-      if (h === 0) return `${m}m`;
-      return `${h}h ${String(m).padStart(2, '0')}m`;
-    }
+      // Fuel calculation in LBS (LJ35A burns ~1350-1500 lb/hr average)
+      const tripLb = Math.round((eetMin / 60) * 1420);
+      const reserveLb = 1350; // ~45 min IFR reserve + alternate
+      const taxiLb = 200;
+      const blockLb = Math.min(6238, Math.max(2100, Math.round((tripLb + reserveLb + taxiLb) / 50) * 50));
 
-    function buildSuggestedAtsRoute(orig, dest) {
-      const key = `${orig}-${dest}`;
-      if (ATS_CORRIDORS[key]) return ATS_CORRIDORS[key];
-      return `${orig} DCT ${dest}`;
-    }
+      // Tank distribution (LJ35A max: Wings 2428 lb, Tips 2440 lb, Fuselage 1370 lb)
+      const wingLb = Math.min(2420, Math.round(blockLb * 0.44));
+      const tipLb = Math.min(2440, Math.round(blockLb * 0.44));
+      const fuselageLb = Math.max(0, blockLb - wingLb - tipLb);
 
-    function getFboInfo(icao) {
-      return FBO_DATA[icao] || {
-        fbo: `Plataforma Ejecutiva ${AIRPORTS[icao]?.city || icao}`,
-        atis: '127.60',
-        gnd: '121.90',
-        twr: '118.10',
-        app: '119.50'
-      };
-    }
+      // Weights in LBS (BOW ~10,150 lb, MTOW 18,300 lb, MLW 15,300 lb)
+      const bowLb = isMedevac ? 10450 : 10150;
+      const payloadLb = paxCount * 195 + (isMedevac ? 350 : paxCount > 0 ? 180 : 0);
+      const zfwLb = bowLb + payloadLb;
+      const towLb = Math.min(18300, zfwLb + blockLb - taxiLb);
+      const elwLb = Math.max(zfwLb + 900, towLb - tripLb);
+      const mlwWarning = elwLb > 15300;
 
-    function calcLJ35Performance(leg) {
-      const origAp = AIRPORTS[leg.orig] || AIRPORTS.SADF;
-      const bow = 10150;
-      const payload = leg.pax === 0 ? 150 : leg.pax * 215 + 120;
-      const zfw = bow + payload;
-      const fuelLbs = leg.fuelLbs || calcFuelLbs(leg.eet);
-      const tow = Math.min(18300, zfw + fuelLbs);
-      const tripFuel = Math.round((leg.eet / 60) * 1240);
-      const elw = Math.max(zfw + 900, tow - tripFuel);
-
-      let rem = fuelLbs;
-      const wingTotal = Math.min(2480, Math.round(rem * 0.44));
-      rem -= wingTotal;
-      const tipTotal = Math.min(2460, Math.round(rem * 0.72));
-      rem -= tipTotal;
-      const fuselage = Math.max(0, Math.min(1290, rem));
-
-      const shortOrHigh = origAp.rwyFt < 6500 || origAp.elev > 3500;
-      const flaps = shortOrHigh ? 'FLAPS 20°' : 'FLAPS 8°';
-      const weightFactor = (tow - 14000) / 4300;
-      const altAdder = Math.round(origAp.elev / 1200);
-      const v1 = Math.round((shortOrHigh ? 114 : 119) + weightFactor * 11 + altAdder);
+      // Takeoff Flaps & V-Speeds
+      const shortOrHigh = orig.rwyFt < 6600 || orig.elev > 2500;
+      const toFlaps = shortOrHigh ? 'FLAPS 20°' : 'FLAPS 8°';
+      const weightDelta = (towLb - 14000) / 1000;
+      const v1 = Math.round((shortOrHigh ? 114 : 119) + weightDelta * 3.2);
       const vr = v1 + 5;
       const v2 = vr + 8;
-      const vref = Math.round(116 + ((elw - 11500) / 3800) * 14);
+
+      // Landing Vref (Flaps 40°)
+      const ldgDelta = (elwLb - 12500) / 1000;
+      const vref = Math.round(115 + ldgDelta * 3.0);
       const vapp = vref + 5;
 
       return {
-        zfw,
-        tow,
-        elw,
-        mlwWarning: elw > 15300,
-        flaps,
+        tripLb,
+        reserveLb,
+        blockLb,
+        wingLb,
+        tipLb,
+        fuselageLb,
+        zfwLb,
+        towLb,
+        elwLb,
+        mlwWarning,
+        toFlaps,
         v1,
         vr,
         v2,
         vref,
-        vapp,
-        tanks: {
-          wingTotal,
-          wingEach: Math.round(wingTotal / 2),
-          tipTotal,
-          tipEach: Math.round(tipTotal / 2),
-          fuselage
+        vapp
+      };
+    }
+
+    function getAtsRoute(fromIcao, toIcao) {
+      const key = `${fromIcao}-${toIcao}`;
+      if (ATS_CORRIDORS[key]) return ATS_CORRIDORS[key];
+      return `${fromIcao} DCT ${toIcao}`;
+    }
+
+    function buildSimBriefUrl(leg, reg, etdUtcStr) {
+      const route = getAtsRoute(leg.from, leg.to);
+      const flNum = leg.fl.replace('FL', '') + '00';
+      const params = new URLSearchParams({
+        type: 'LJ35',
+        orig: leg.from,
+        dest: leg.to,
+        route: route,
+        fl: flNum,
+        pax: String(leg.pax),
+        reg: reg,
+        fltnum: reg.replace('-', ''),
+        units: 'LBS'
+      });
+      if (etdUtcStr && etdUtcStr.includes(':')) {
+        const [hh, mm] = etdUtcStr.replace('Z', '').trim().split(':');
+        if (hh && mm) {
+          params.set('deph', hh);
+          params.set('depm', mm);
         }
-      };
+      }
+      return `https://dispatch.simbrief.com/options/custom?${params.toString()}`;
     }
 
-    function buildSimBriefUrl(leg, depTimeUtcStr) {
-      const reg = leg.reg || state.activeReg;
-      const route = encodeURIComponent(buildSuggestedAtsRoute(leg.orig, leg.dest));
-      const flNum = String(leg.fl || 'FL370').replace('FL', '') + '00';
-      const paxCount = leg.pax || 0;
-      const cargoKgs = paxCount === 0 ? 50 : paxCount * 20;
-      let url = `https://dispatch.simbrief.com/options/custom?type=LJ35&orig=${leg.orig}&dest=${leg.dest}&reg=${reg}&fltnum=${reg.replace('-', '')}&route=${route}&fl=${flNum}&pax=${paxCount}&cargo=${cargoKgs}&units=LBS`;
-      if (depTimeUtcStr && /^\d{2}:\d{2}$/.test(depTimeUtcStr)) {
-        const [hh, mm] = depTimeUtcStr.split(':');
-        url += `&deph=${hh}&depm=${mm}`;
-      }
-      return url;
+    function formatMinutes(totalMin) {
+      const mins = Math.max(0, Math.round(totalMin));
+      const h = Math.floor(mins / 60);
+      const m = mins % 60;
+      if (h === 0) return `${m}m`;
+      return `${h}h ${String(m).padStart(2, '0')}m`;
     }
 
     // =========================================================================
-    // 6. SMART DISPATCH ENGINE (MULTI-LEG & TARGET TIME ±15 MIN)
+    // 6. DISPATCH GENERATOR (±15 MIN TARGET WINDOW & MULTI-LEG ROLE LOGIC)
     // =========================================================================
-    function getBadgeStyle(type) {
-      if (type === 'FERRY' || type === 'RETORNO A BASE') return 'bg-slate-700/50 text-slate-300 border-slate-600';
-      if (type === 'MEDEVAC') return 'bg-rose-500/15 text-rose-300 border-rose-500/40';
-      if (type === 'LARGO ALCANCE') return 'bg-sky-500/15 text-sky-300 border-sky-500/40';
-      return 'bg-amber-500/15 text-amber-300 border-amber-500/40';
-    }
-
-    function createLegObj(orig, dest, legType, pax, legBrief) {
-      const dist = calcDistanceNM(orig, dest);
-      const eet = calcEETMin(dist);
-      const fl = calcRVSMFlightLevel(orig, dest, dist);
-      const fuelLbs = calcFuelLbs(eet);
-      const isMedevac = state.activeReg === 'LV-IYQ';
-      let paxLabel = '0 PAX (Vacío / Ferry)';
-      if (pax > 0) {
-        paxLabel = isMedevac
-          ? `${pax} ${pax === 1 ? 'Paciente + Eq. Médico' : 'Camilla + Eq. Médico'}`
-          : `${pax} PAX Ejecutivos`;
-      }
-      return {
-        orig,
-        dest,
-        dist,
-        eet,
-        fl,
-        fuelLbs,
-        legType,
-        pax,
-        paxLabel,
-        legBrief,
-        reg: state.activeReg
-      };
-    }
-
-    function buildMissionFromChain(stops, missionType, narrative, legConfigs) {
-      const legs = [];
-      let totalDist = 0;
-      let totalAirMin = 0;
-      for (let i = 0; i < stops.length - 1; i++) {
-        const cfg = legConfigs[i] || { type: missionType, pax: 4, brief: '' };
-        const leg = createLegObj(stops[i], stops[i + 1], cfg.type, cfg.pax, cfg.brief);
-        legs.push(leg);
-        totalDist += leg.dist;
-        totalAirMin += leg.eet;
-      }
-      const turnaroundTotal = Math.max(0, (legs.length - 1) * TURNAROUND_MIN);
-      const blockMin = totalAirMin + turnaroundTotal;
-      const targetMin = Math.round(state.availableHours * 60);
-      return {
-        id: 'MSN-' + Math.random().toString(36).slice(2, 8).toUpperCase(),
-        reg: state.activeReg,
-        callsign: state.activeReg,
-        missionType,
-        narrative,
-        legs,
-        totalDist,
-        totalAirMin,
-        blockMin,
-        diffMin: blockMin - targetMin
-      };
-    }
-
-    function getCandidatePool() {
-      const isMedevac = state.activeReg === 'LV-IYQ';
-      return Object.keys(AIRPORTS).filter(icao => {
-        if (!isSceneryEnabled(icao)) return false;
-        const ap = AIRPORTS[icao];
-        if (ap.region === 'usa_corridor' && !state.longRangeMode) return false;
-        if (!isMedevac && ap.rwyFt < 4300) return false;
+    function getAvailableDestinations(excludeIcao) {
+      return Object.values(AIRPORTS).filter(ap => {
+        if (ap.icao === excludeIcao) return false;
+        if (!state.enabledSceneries[ap.icao]) return false;
+        if (!state.longRangeMode && ap.region === 'usa_corridor') return false;
         return true;
       });
     }
 
     function pickRandom(arr) {
+      if (!arr || arr.length === 0) return null;
       return arr[Math.floor(Math.random() * arr.length)];
     }
 
-    function generateDispatches() {
-      const ac = state.fleet[state.activeReg];
-      const start = ac.location;
+    function buildLegObject(fromIcao, toIcao, roleType, paxCount, briefNote) {
+      const distNM = calcDistanceNM(fromIcao, toIcao);
+      const eetMin = calcEETMin(distNM);
+      const fl = calcRVSMFlightLevel(fromIcao, toIcao, distNM);
+      const isMedevac = state.activeReg === 'LV-IYQ' || roleType === 'MEDEVAC';
+      const perf = calcLearjetPerformance(fromIcao, toIcao, distNM, eetMin, paxCount, isMedevac);
+
+      return {
+        from: fromIcao,
+        to: toIcao,
+        distNM,
+        eetMin,
+        fl,
+        role: roleType,
+        pax: paxCount,
+        note: briefNote,
+        perf,
+        atsRoute: getAtsRoute(fromIcao, toIcao),
+        oooi: { out: null, off: null, on: null, in: null }
+      };
+    }
+
+    function buildUsaCorridorMission(originIcao) {
+      const usaTargets = ['KOPF', 'KMIA', 'KFLL'].filter(c => state.enabledSceneries[c]);
+      const destUsa = pickRandom(usaTargets) || 'KOPF';
+      const stop1Candidates = ['SASA', 'SCFA', 'SCCF', 'SLVR'].filter(c => state.enabledSceneries[c] && c !== originIcao);
+      const stop1 = pickRandom(stop1Candidates) || 'SASA';
+      const stop2 = state.enabledSceneries['SPJC'] ? 'SPJC' : 'SKBO';
+      const stop3Candidates = ['SKBO', 'MPTO', 'MKJP'].filter(c => state.enabledSceneries[c] && c !== stop2);
+      const stop3 = pickRandom(stop3Candidates) || 'MPTO';
+
+      const waypoints = [originIcao, stop1, stop2, stop3, destUsa];
       const isMedevac = state.activeReg === 'LV-IYQ';
-      const targetMin = Math.round(state.availableHours * 60);
-      const pool = getCandidatePool();
-      const missions = [];
+      const role = isMedevac ? 'MEDEVAC' : 'VIP';
+      const pax = isMedevac ? 2 : 5;
 
-      const mustReturnBase =
-        state.missionPref === 'base' ||
-        (start !== 'SADF' && (ac.legsAway >= 3 || ac.hoursAway >= 6 || ac.hoursUntilInspection <= 4.5));
-
-      if ((start === 'SABE' || start === 'SAEZ') && start !== 'SADF') {
-        missions.push(
-          buildMissionFromChain(
-            [start, 'SADF'],
-            'RETORNO A BASE',
-            `Traslado vacío (Ferry) de reposicionamiento desde ${AIRPORTS[start].name} hacia nuestro hangar en San Fernando (SADF).`,
-            [{ type: 'RETORNO A BASE', pax: 0, brief: 'Reposicionamiento corto a hangar Baires Fly en SADF.' }]
+      const legs = [];
+      for (let i = 0; i < waypoints.length - 1; i++) {
+        legs.push(
+          buildLegObject(
+            waypoints[i],
+            waypoints[i + 1],
+            role,
+            pax,
+            i === waypoints.length - 2
+              ? `Tramo final internacional hacia ${AIRPORTS[destUsa].city} (Migraciones / FBO Signature).`
+              : `Escala técnica de reabastecimiento Jet-A1 en ${AIRPORTS[waypoints[i + 1]].city}.`
           )
         );
       }
 
-      if (state.longRangeMode && targetMin >= 420) {
-        const usaDest = ['KOPF', 'KMIA', 'KFLL'].filter(isSceneryEnabled);
-        if (usaDest.length > 0) {
-          const finalUsa = pickRandom(usaDest);
-          const stop1 = ['SASA', 'SCFA', 'SCCF'].find(isSceneryEnabled) || 'SACO';
-          const stop2 = isSceneryEnabled('SPJC') ? 'SPJC' : 'SLVR';
-          const stop3 = ['SKBO', 'SKRG', 'MPTO'].find(isSceneryEnabled) || 'SKBO';
+      const totalAirMin = legs.reduce((acc, l) => acc + l.eetMin, 0);
+      const totalGroundMin = (legs.length - 1) * TURNAROUND_MIN;
+      const totalMin = totalAirMin + totalGroundMin;
+      const totalNM = legs.reduce((acc, l) => acc + l.distNM, 0);
 
-          if (['KOPF', 'KMIA', 'KFLL'].includes(start)) {
-            missions.push(
-              buildMissionFromChain(
-                [start, stop3, stop2, stop1, 'SADF'],
-                'LARGO ALCANCE',
-                `Regreso internacional de fin de semana desde ${AIRPORTS[start].city} hacia San Fernando con escalas técnicas de combustible.`,
-                [
-                  { type: 'VIP', pax: 5, brief: 'Salida internacional desde FBO en Florida hacia escala norte.' },
-                  { type: 'VIP', pax: 5, brief: 'Escala técnica de combustible y migraciones.' },
-                  { type: 'VIP', pax: 5, brief: 'Cruce andino hacia el Cono Sur con escala técnica.' },
-                  { type: 'RETORNO A BASE', pax: 5, brief: 'Tramo final de arribo a San Fernando (SADF).' }
-                ]
-              )
-            );
-          } else {
-            const chain = start === 'SADF' ? ['SADF', stop1, stop2, stop3, finalUsa] : [start, stop1, stop2, stop3, finalUsa];
-            missions.push(
-              buildMissionFromChain(
-                chain,
-                'LARGO ALCANCE',
-                `Charter ejecutivo internacional de fin de semana hacia ${AIRPORTS[finalUsa].city} (${finalUsa}) con escalas técnicas optimizadas para el alcance del Learjet 35A.`,
-                [
-                  { type: 'VIP', pax: 6, brief: 'Despegue con 6 ejecutivos rumbo a primera escala técnica.' },
-                  { type: 'VIP', pax: 6, brief: 'Reabastecimiento rápido de 20 min y continuación hacia Lima.' },
-                  { type: 'VIP', pax: 6, brief: 'Tramo hacia el Caribe/Colombia previa entrada a EE.UU.' },
-                  { type: 'LARGO ALCANCE', pax: 6, brief: `Arribo final a FBO ejecutivo en ${AIRPORTS[finalUsa].city}.` }
-                ]
-              )
-            );
-          }
+      return {
+        id: 'ms_' + Math.random().toString(36).slice(2, 9),
+        title: `Corredor Ejecutivo Internacional ➔ ${AIRPORTS[destUsa].city}`,
+        badge: 'LARGO ALCANCE',
+        summary: isMedevac
+          ? `Traslado sanitario de alta complejidad hacia centro médico en Florida con 3 escalas técnicas de combustible.`
+          : `Chárter ejecutivo de fin de semana hacia ${AIRPORTS[destUsa].name} con escalas técnicas coordinadas en Sudamérica y Caribe.`,
+        legs,
+        totalMin,
+        totalNM,
+        diffMin: totalMin - Math.round(state.availableHours * 60),
+        schedule: null
+      };
+    }
+
+    function generateDispatches() {
+      const origin = state.pilotLocation;
+      const ac = state.fleet[state.activeReg];
+      const isMedevacAc = state.activeReg === 'LV-IYQ';
+      const targetMin = Math.round(state.availableHours * 60);
+      const minWindow = Math.max(25, targetMin - 15);
+      const maxWindow = targetMin + 15;
+      const mustReturnBase =
+        state.missionPref === 'base' ||
+        (origin !== 'SADF' && (ac.legsAway >= 3 || ac.hoursAway >= 6.0 || ac.hoursUntilInspection <= 4.5));
+
+      const pool = getAvailableDestinations(origin).filter(ap => calcDistanceNM(origin, ap.icao) <= LJ35_MAX_RANGE_NM);
+      const results = [];
+
+      // Special case: Short shuttle from SABE or SAEZ back to SADF
+      if ((origin === 'SABE' || origin === 'SAEZ') && targetMin <= 75) {
+        const leg = buildLegObject(
+          origin,
+          'SADF',
+          'RETORNO A BASE',
+          0,
+          `Reposicionamiento Ferry vacío desde ${AIRPORTS[origin].name} hacia hangar Baires Fly en San Fernando.`
+        );
+        results.push({
+          id: 'ms_' + Math.random().toString(36).slice(2, 9),
+          title: `Reposicionamiento Ferry ➔ Base SADF`,
+          badge: 'RETORNO A BASE',
+          summary: `Salto corto de posicionamiento sin pasajeros desde ${AIRPORTS[origin].city} para guardar la aeronave en base.`,
+          legs: [leg],
+          totalMin: leg.eetMin,
+          totalNM: leg.distNM,
+          diffMin: leg.eetMin - targetMin,
+          schedule: null
+        });
+      }
+
+      // Long-range USA mission if enabled and slider >= 10 hours
+      if (state.longRangeMode && targetMin >= 600) {
+        results.push(buildUsaCorridorMission(origin));
+      }
+
+      // Attempt to build diverse 1, 2, 3, and 4-leg rotations fitting targetMin ± 15m
+      for (let attempt = 0; attempt < 220 && results.length < 4; attempt++) {
+        const legCountChoice = [1, 2, 2, 3, 3, 4][attempt % 6];
+        const candidate = tryBuildRotation(origin, legCountChoice, minWindow, maxWindow, targetMin, pool, isMedevacAc, mustReturnBase);
+        if (!candidate) continue;
+
+        const sig = candidate.legs.map(l => `${l.from}-${l.to}-${l.role}`).join('|');
+        if (!results.some(r => r.legs.map(l => `${l.from}-${l.to}-${l.role}`).join('|') === sig)) {
+          results.push(candidate);
         }
       }
 
-      if (mustReturnBase && start !== 'SADF') {
-        const directDist = calcDistanceNM(start, 'SADF');
-        if (directDist <= LJ35_MAX_RANGE_NM) {
-          const directMsn = buildMissionFromChain(
-            [start, 'SADF'],
-            'RETORNO A BASE',
-            ac.hoursUntilInspection <= 4.5
-              ? `Alerta de mantenimiento: quedan ${ac.hoursUntilInspection.toFixed(1)} hs de remanente. Retorno obligatorio a hangar SADF.`
-              : `Retorno operativo a base San Fernando (SADF) tras ${ac.legsAway} tramos fuera de base.`,
-            [{ type: 'RETORNO A BASE', pax: isMedevac ? 0 : 2, brief: 'Regreso directo a hangar Baires Fly en SADF.' }]
+      // Fallback if strict ±15m found fewer than 3 options
+      if (results.length < 3 && pool.length > 0) {
+        for (let fallback = 0; fallback < 40 && results.length < 3; fallback++) {
+          const legCount = targetMin <= 110 ? 1 : targetMin <= 220 ? 2 : 3;
+          const loose = tryBuildRotation(
+            origin,
+            legCount,
+            Math.max(20, targetMin - 35),
+            targetMin + 35,
+            targetMin,
+            pool,
+            isMedevacAc,
+            mustReturnBase
           );
-          missions.push(directMsn);
-
-          if (targetMin > directMsn.blockMin + 50) {
-            const mids = pool.filter(c => c !== start && c !== 'SADF' && calcDistanceNM(start, c) <= LJ35_MAX_RANGE_NM && calcDistanceNM(c, 'SADF') <= LJ35_MAX_RANGE_NM);
-            for (let attempt = 0; attempt < 25; attempt++) {
-              const mid = pickRandom(mids);
-              if (!mid) break;
-              const viaMsn = buildMissionFromChain(
-                [start, mid, 'SADF'],
-                'RETORNO A BASE',
-                `Retorno a San Fernando aprovechando una escala comercial en ${AIRPORTS[mid].city} para optimizar el bloque de ${state.availableHours} hs.`,
-                [
-                  { type: isMedevac ? 'MEDEVAC' : 'VIP', pax: isMedevac ? 2 : 4, brief: `Traslado de pasajeros hasta ${AIRPORTS[mid].city}.` },
-                  { type: 'RETORNO A BASE', pax: 0, brief: 'Tramo final vacío (Ferry) de regreso a SADF.' }
-                ]
-              );
-              if (Math.abs(viaMsn.diffMin) <= 25) {
-                missions.push(viaMsn);
-                break;
-              }
+          if (loose) {
+            const sig = loose.legs.map(l => `${l.from}-${l.to}`).join('|');
+            if (!results.some(r => r.legs.map(l => `${l.from}-${l.to}`).join('|') === sig)) {
+              results.push(loose);
             }
           }
         }
       }
 
-      const validNeighbors = from =>
-        pool.filter(to => to !== from && calcDistanceNM(from, to) <= LJ35_MAX_RANGE_NM);
+      // Sort by closeness to user's target time
+      results.sort((a, b) => Math.abs(a.diffMin) - Math.abs(b.diffMin));
+      generatedMissions = results.slice(0, 4);
+      renderDispatches();
+    }
 
-      const candidates = [];
-      const maxAttempts = 220;
+    function tryBuildRotation(origin, legCount, minWin, maxWin, targetMin, pool, isMedevacAc, mustReturnBase) {
+      if (pool.length === 0) return null;
+      const forceFerryOnly = state.missionPref === 'ferry';
+      const primaryCommercialRole = isMedevacAc ? 'MEDEVAC' : 'VIP';
 
-      for (let i = 0; i < maxAttempts; i++) {
-        const legCountRoll = Math.random();
-        let desiredLegs = 2;
-        if (targetMin <= 110) desiredLegs = legCountRoll < 0.55 ? 1 : 2;
-        else if (targetMin <= 210) desiredLegs = legCountRoll < 0.35 ? 1 : legCountRoll < 0.85 ? 2 : 3;
-        else desiredLegs = legCountRoll < 0.2 ? 1 : legCountRoll < 0.55 ? 2 : legCountRoll < 0.85 ? 3 : 4;
-
-        const stops = [start];
-        let valid = true;
-        for (let l = 0; l < desiredLegs; l++) {
-          const curr = stops[stops.length - 1];
-          let nextOptions = validNeighbors(curr).filter(x => x !== stops[stops.length - 2]);
-          if (l === desiredLegs - 1 && start === 'SADF' && desiredLegs >= 2 && Math.random() < 0.7) {
-            if (nextOptions.includes('SADF')) {
-              stops.push('SADF');
-              continue;
-            }
-          }
-          if (nextOptions.length === 0) {
-            valid = false;
-            break;
-          }
-          stops.push(pickRandom(nextOptions));
+      if (legCount === 1) {
+        let candidates = pool;
+        if (mustReturnBase && origin !== 'SADF') {
+          candidates = pool.filter(ap => ap.icao === 'SADF');
         }
+        const dest = pickRandom(candidates);
+        if (!dest) return null;
 
-        if (!valid) continue;
+        const role =
+          dest.icao === 'SADF' && origin !== 'SADF'
+            ? 'RETORNO A BASE'
+            : forceFerryOnly
+            ? 'FERRY'
+            : primaryCommercialRole;
+        const pax = role === 'FERRY' || role === 'RETORNO A BASE' ? 0 : isMedevacAc ? 2 : Math.floor(Math.random() * 5) + 2;
+        const leg = buildLegObject(
+          origin,
+          dest.icao,
+          role,
+          pax,
+          role === 'FERRY'
+            ? `Vuelo de traslado vacío hacia ${dest.city} para posicionamiento operativo.`
+            : role === 'RETORNO A BASE'
+            ? `Regreso directo a San Fernando (SADF) para cierre de rotación.`
+            : isMedevacAc
+            ? `Operativo sanitario urgente con equipo médico y camilla hacia ${dest.city}.`
+            : `Vuelo ejecutivo directo con ${pax} pasajeros VIP hacia ${dest.name}.`
+        );
 
-        const mainType = state.missionPref === 'ferry' ? 'FERRY' : isMedevac ? 'MEDEVAC' : 'VIP';
-        const legConfigs = [];
-        const totalL = stops.length - 1;
+        if (leg.eetMin < minWin || leg.eetMin > maxWin) return null;
 
-        for (let idx = 0; idx < totalL; idx++) {
-          const o = stops[idx];
-          const d = stops[idx + 1];
-          if (state.missionPref === 'ferry') {
-            legConfigs.push({
-              type: d === 'SADF' ? 'RETORNO A BASE' : 'FERRY',
-              pax: 0,
-              brief: `Traslado técnico vacío entre ${AIRPORTS[o].city} y ${AIRPORTS[d].city}.`
-            });
-          } else if (totalL === 1) {
-            const pax = isMedevac ? 2 : Math.floor(Math.random() * 5) + 2;
-            legConfigs.push({
-              type: mainType,
-              pax,
-              brief: isMedevac
-                ? `Vuelo sanitario prioritario trasladando paciente estable y equipo médico a ${AIRPORTS[d].city}.`
-                : `Vuelo ejecutivo directo con ${pax} pasajeros hacia FBO en ${AIRPORTS[d].city}.`
-            });
-          } else if (idx === 0 && totalL >= 2 && Math.random() < 0.55) {
-            legConfigs.push({
-              type: 'FERRY',
-              pax: 0,
-              brief: `Posicionamiento vacío (Ferry) para embarcar pasajeros en ${AIRPORTS[d].city}.`
-            });
-          } else if (idx === totalL - 1 && d === 'SADF' && Math.random() < 0.65) {
-            legConfigs.push({
-              type: 'RETORNO A BASE',
-              pax: 0,
-              brief: `Regreso vacío (Ferry) a base San Fernando (SADF) tras desembarcar pasajeros en ${AIRPORTS[o].city}.`
-            });
-          } else {
-            const pax = isMedevac ? 2 : Math.floor(Math.random() * 5) + 2;
-            legConfigs.push({
-              type: mainType,
-              pax,
-              brief: isMedevac
-                ? `Traslado sanitario con equipo médico a bordo hacia ${AIRPORTS[d].city}.`
-                : `Tramo comercial con ${pax} pasajeros ejecutivos hacia ${AIRPORTS[d].city}.`
-            });
-          }
-        }
-
-        const routeSignature = stops.join('-');
-        if (candidates.some(c => c.sig === routeSignature)) continue;
-
-        const narrative = isMedevac
-          ? `Operación sanitaria coordinada para el ${state.activeReg} (${totalL} ${totalL === 1 ? 'tramo' : 'tramos'}), ajustada a tu ventana operativa de ${state.availableHours} hs.`
-          : totalL === 1
-          ? `Charter ejecutivo directo desde ${AIRPORTS[start].city} hacia ${AIRPORTS[stops[1]].city} con atención en FBO.`
-          : `Rotación ejecutiva de ${totalL} tramos combinando posicionamientos y traslados VIP dentro de tu bloque horario.`;
-
-        const msn = buildMissionFromChain(stops, mainType, narrative, legConfigs);
-        candidates.push({ sig: routeSignature, msn, absDiff: Math.abs(msn.diffMin) });
+        return {
+          id: 'ms_' + Math.random().toString(36).slice(2, 9),
+          title: `${AIRPORTS[origin].city} ➔ ${dest.city}`,
+          badge: role,
+          summary: leg.note,
+          legs: [leg],
+          totalMin: leg.eetMin,
+          totalNM: leg.distNM,
+          diffMin: leg.eetMin - targetMin,
+          schedule: null
+        };
       }
 
-      candidates.sort((a, b) => a.absDiff - b.absDiff);
-      for (const item of candidates) {
-        if (missions.length >= 4) break;
-        if (!missions.some(m => m.legs.map(l => l.dest).join('-') === item.msn.legs.map(l => l.dest).join('-'))) {
-          missions.push(item.msn);
+      if (legCount === 2) {
+        const stop1 = pickRandom(pool);
+        if (!stop1) return null;
+        const leg1Time = calcEETMin(calcDistanceNM(origin, stop1.icao));
+        const endIcao = mustReturnBase && origin !== 'SADF' ? 'SADF' : origin;
+        if (calcDistanceNM(stop1.icao, endIcao) > LJ35_MAX_RANGE_NM || stop1.icao === endIcao) return null;
+        const leg2Time = calcEETMin(calcDistanceNM(stop1.icao, endIcao));
+        const totalMin = leg1Time + TURNAROUND_MIN + leg2Time;
+
+        if (totalMin < minWin || totalMin > maxWin) return null;
+
+        // Realistic 2-leg patterns:
+        // Pattern A: Ferry to pick up PAX -> Commercial return
+        // Pattern B: Commercial outbound -> Ferry empty return to base
+        // Pattern C: Commercial round-trip (same or adjusted PAX)
+        const pattern = forceFerryOnly ? 'ALL_FERRY' : ['PICKUP_FERRY', 'DROP_FERRY', 'ROUNDTRIP'][Math.floor(Math.random() * 3)];
+        const paxMain = isMedevacAc ? 2 : Math.floor(Math.random() * 5) + 2;
+
+        let leg1, leg2, summary, badge;
+        if (pattern === 'ALL_FERRY') {
+          leg1 = buildLegObject(origin, stop1.icao, 'FERRY', 0, `Posicionamiento vacío hacia ${stop1.city}.`);
+          leg2 = buildLegObject(stop1.icao, endIcao, endIcao === 'SADF' ? 'RETORNO A BASE' : 'FERRY', 0, `Traslado vacío hacia ${AIRPORTS[endIcao].city}.`);
+          badge = 'FERRY';
+          summary = `Rotación de posicionamiento técnico vía ${stop1.city} con escala de ${TURNAROUND_MIN} min.`;
+        } else if (pattern === 'PICKUP_FERRY') {
+          leg1 = buildLegObject(origin, stop1.icao, 'FERRY', 0, `Tramo vacío para buscar a ${paxMain} pasajeros en FBO ${stop1.city}.`);
+          leg2 = buildLegObject(stop1.icao, endIcao, primaryCommercialRole, paxMain, `Embarque de ${paxMain} PAX en ${stop1.city} con destino final ${AIRPORTS[endIcao].city}.`);
+          badge = primaryCommercialRole;
+          summary = `Posicionamiento Ferry a ${stop1.city} para embarcar ${paxMain} pasajeros y regresar a ${AIRPORTS[endIcao].city}.`;
+        } else if (pattern === 'DROP_FERRY') {
+          leg1 = buildLegObject(origin, stop1.icao, primaryCommercialRole, paxMain, `Traslado de ${paxMain} PAX hacia ${stop1.city}.`);
+          leg2 = buildLegObject(stop1.icao, endIcao, endIcao === 'SADF' ? 'RETORNO A BASE' : 'FERRY', 0, `Desembarque en ${stop1.city} y regreso vacío a ${AIRPORTS[endIcao].city}.`);
+          badge = primaryCommercialRole;
+          summary = `Vuelo con ${paxMain} pasajeros hacia ${stop1.city} y retorno Ferry vacío a base.`;
+        } else {
+          const paxReturn = isMedevacAc ? 2 : Math.max(1, paxMain - (Math.random() > 0.5 ? 1 : 0));
+          leg1 = buildLegObject(origin, stop1.icao, primaryCommercialRole, paxMain, `Ida ejecutiva con ${paxMain} PAX hacia ${stop1.city}.`);
+          leg2 = buildLegObject(stop1.icao, endIcao, primaryCommercialRole, paxReturn, `Regreso con ${paxReturn} PAX tras reunión en ${stop1.city}.`);
+          badge = primaryCommercialRole;
+          summary = `Ida y vuelta en el día a ${stop1.city} con espera de ${TURNAROUND_MIN} min en plataforma.`;
         }
+
+        return {
+          id: 'ms_' + Math.random().toString(36).slice(2, 9),
+          title: `${AIRPORTS[origin].city} ➔ ${stop1.city} ➔ ${AIRPORTS[endIcao].city}`,
+          badge,
+          summary,
+          legs: [leg1, leg2],
+          totalMin,
+          totalNM: leg1.distNM + leg2.distNM,
+          diffMin: totalMin - targetMin,
+          schedule: null
+        };
       }
 
-      generatedMissions = missions;
-      renderDispatchList();
+      if (legCount >= 3) {
+        const stop1 = pickRandom(pool);
+        if (!stop1) return null;
+        const stop2Pool = pool.filter(ap => ap.icao !== stop1.icao && calcDistanceNM(stop1.icao, ap.icao) <= LJ35_MAX_RANGE_NM);
+        const stop2 = pickRandom(stop2Pool);
+        if (!stop2) return null;
+
+        const endIcao = mustReturnBase && origin !== 'SADF' ? 'SADF' : origin;
+        if (stop2.icao === endIcao || calcDistanceNM(stop2.icao, endIcao) > LJ35_MAX_RANGE_NM) return null;
+
+        const t1 = calcEETMin(calcDistanceNM(origin, stop1.icao));
+        const t2 = calcEETMin(calcDistanceNM(stop1.icao, stop2.icao));
+        const t3 = calcEETMin(calcDistanceNM(stop2.icao, endIcao));
+        const totalMin = t1 + t2 + t3 + TURNAROUND_MIN * 2;
+
+        if (totalMin < minWin || totalMin > maxWin) return null;
+
+        const pax1 = forceFerryOnly ? 0 : isMedevacAc ? 2 : Math.floor(Math.random() * 4) + 3;
+        const pax2 = forceFerryOnly ? 0 : isMedevacAc ? 2 : Math.max(1, pax1 - 1);
+
+        const leg1 = buildLegObject(
+          origin,
+          stop1.icao,
+          forceFerryOnly ? 'FERRY' : primaryCommercialRole,
+          pax1,
+          forceFerryOnly ? `Posicionamiento inicial hacia ${stop1.city}.` : `Primer tramo con ${pax1} PAX hacia ${stop1.city}.`
+        );
+        const leg2 = buildLegObject(
+          stop1.icao,
+          stop2.icao,
+          forceFerryOnly ? 'FERRY' : primaryCommercialRole,
+          pax2,
+          forceFerryOnly ? `Continuación Ferry hacia ${stop2.city}.` : `Escala en ${stop1.city}; continúan ${pax2} PAX hacia ${stop2.city}.`
+        );
+        const leg3 = buildLegObject(
+          stop2.icao,
+          endIcao,
+          endIcao === 'SADF' ? 'RETORNO A BASE' : 'FERRY',
+          0,
+          `Fin de servicio comercial en ${stop2.city}; retorno Ferry vacío hacia ${AIRPORTS[endIcao].city}.`
+        );
+
+        return {
+          id: 'ms_' + Math.random().toString(36).slice(2, 9),
+          title: `Triangular: ${stop1.city} • ${stop2.city}`,
+          badge: forceFerryOnly ? 'FERRY' : primaryCommercialRole,
+          summary: `Rotación multi-escala de 3 tramos (${stop1.icao} / ${stop2.icao}) con cierre vacío de regreso a ${AIRPORTS[endIcao].city}.`,
+          legs: [leg1, leg2, leg3],
+          totalMin,
+          totalNM: leg1.distNM + leg2.distNM + leg3.distNM,
+          diffMin: totalMin - targetMin,
+          schedule: null
+        };
+      }
+
+      return null;
+    }
+
+    function setTimePreset(hours, enableLongRange) {
+      state.availableHours = hours;
+      state.longRangeMode = Boolean(enableLongRange);
+      document.getElementById('time-slider').value = String(hours);
+      document.getElementById('toggle-longrange').checked = state.longRangeMode;
+      updateTimeDisplay(hours, true);
+      saveState();
+      generateDispatches();
+    }
+
+    function toggleLongRange(checked) {
+      state.longRangeMode = Boolean(checked);
+      if (state.longRangeMode && state.availableHours < 10) {
+        state.availableHours = 12;
+        document.getElementById('time-slider').value = '12';
+        updateTimeDisplay(12, true);
+      }
+      saveState();
+      generateDispatches();
+    }
+
+    function setMissionPref(val) {
+      state.missionPref = val;
+      saveState();
+      generateDispatches();
+    }
+
+    function getBadgeStyle(badge) {
+      if (badge === 'MEDEVAC') return 'bg-rose-500/15 text-rose-300 border-rose-500/35';
+      if (badge === 'FERRY' || badge === 'RETORNO A BASE') return 'bg-sky-500/15 text-sky-300 border-sky-500/35';
+      if (badge === 'LARGO ALCANCE') return 'bg-purple-500/15 text-purple-300 border-purple-500/35';
+      return 'bg-orange-500/15 text-orange-300 border-orange-500/35';
+    }
+
+    function renderDispatches() {
+      const container = document.getElementById('dispatch-list');
+      const warnEl = document.getElementById('dispatch-active-warning');
+      if (warnEl) warnEl.classList.toggle('hidden', !state.activeMission);
+
+      if (!generatedMissions || generatedMissions.length === 0) {
+        container.innerHTML = `
+          <div class="col-span-full bg-efb-panel border border-efb-border rounded-2xl p-8 text-center space-y-2">
+            <p class="text-sm font-bold text-white">No hay combinaciones exactas para esa ventana de tiempo</p>
+            <p class="text-xs text-slate-400">Probá mover el deslizador de tiempo o habilitá más aeropuertos en la pestaña Escenarios.</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = generatedMissions
+        .map(m => {
+          const diffLabel =
+            m.diffMin === 0 ? 'Exacto' : m.diffMin > 0 ? `+${m.diffMin}m vs obj` : `${m.diffMin}m vs obj`;
+          const firstLeg = m.legs[0];
+          const sbUrl = buildSimBriefUrl(firstLeg, state.activeReg, '');
+
+          const legsHtml = m.legs
+            .map((leg, idx) => {
+              const destAp = AIRPORTS[leg.to];
+              return `
+                <div class="bg-efb-bg/90 border border-efb-border/90 rounded-xl p-3 space-y-1.5">
+                  <div class="flex items-center justify-between gap-2">
+                    <div class="flex items-center gap-2 font-mono text-xs">
+                      <span class="text-slate-500">#${idx + 1}</span>
+                      <strong class="text-white">${leg.from}</strong>
+                      <span class="text-orange-400">➔</span>
+                      <strong class="text-white">${leg.to}</strong>
+                      <span class="text-[10px] px-1.5 py-0.5 rounded border ${getBadgeStyle(leg.role)}">${leg.role}</span>
+                    </div>
+                    <span class="font-mono text-[11px] text-slate-300">${formatMinutes(leg.eetMin)} • ${leg.distNM} NM</span>
+                  </div>
+                  <p class="text-[11px] text-slate-400 leading-snug">${leg.note}</p>
+                  <div class="flex flex-wrap items-center justify-between gap-2 text-[10px] font-mono text-slate-400 pt-1 border-t border-efb-border/60">
+                    <span>PAX: <strong class="text-slate-200">${leg.pax}</strong> • <strong class="text-slate-200">${leg.fl}</strong> • Fuel: <strong class="text-orange-300">${leg.perf.blockLb} lb</strong></span>
+                    <a href="${destAp.url}" target="_blank" rel="noopener" class="text-sky-400 hover:underline">${destAp.dev} ↗</a>
+                  </div>
+                </div>
+              `;
+            })
+            .join('');
+
+          return `
+            <article class="bg-efb-panel border border-efb-border hover:border-slate-700 rounded-2xl p-4 sm:p-5 flex flex-col justify-between gap-4 transition">
+              <div class="space-y-3">
+                <div class="flex items-start justify-between gap-2">
+                  <div class="flex flex-wrap items-center gap-1.5">
+                    <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded border ${getBadgeStyle(m.badge)}">${m.badge}</span>
+                    <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-efb-bg border border-efb-border text-slate-300">${m.legs.length} ${m.legs.length === 1 ? 'tramo' : 'tramos'}</span>
+                    <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/25 text-emerald-300">${diffLabel}</span>
+                  </div>
+                  <div class="text-right font-mono shrink-0">
+                    <span class="text-sm font-bold text-white block">${formatMinutes(m.totalMin)}</span>
+                    <span class="text-[10px] text-slate-400">${m.totalNM} NM</span>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 class="text-base font-bold text-white">${m.title}</h3>
+                  <p class="text-xs text-slate-400 mt-0.5 leading-relaxed">${m.summary}</p>
+                </div>
+
+                <div class="space-y-2">${legsHtml}</div>
+
+                <details class="bg-efb-bg/60 border border-efb-border rounded-xl px-3 py-2 text-xs">
+                  <summary class="cursor-pointer font-semibold text-slate-300 select-none">Detalles Técnicos LJ35A (Tanques, V-Speeds & Ruta ATS)</summary>
+                  <div class="mt-2.5 pt-2.5 border-t border-efb-border/70 space-y-2 font-mono text-[11px] text-slate-300">
+                    <div><span class="text-slate-500">RUTA ATS T1:</span> <span class="text-sky-300">${firstLeg.atsRoute}</span></div>
+                    <div><span class="text-slate-500">TANQUES T1:</span> Wings ${firstLeg.perf.wingLb} lb • Tips ${firstLeg.perf.tipLb} lb • Fuselage ${firstLeg.perf.fuselageLb} lb</div>
+                    <div><span class="text-slate-500">PERF T1 (${firstLeg.perf.toFlaps}):</span> V1 ${firstLeg.perf.v1} / VR ${firstLeg.perf.vr} / V2 ${firstLeg.perf.v2} kt • VREF ${firstLeg.perf.vref} kt</div>
+                  </div>
+                </details>
+              </div>
+
+              <div class="flex items-center gap-2 pt-3 border-t border-efb-border">
+                <a href="${sbUrl}" target="_blank" rel="noopener" class="min-h-[42px] px-3.5 py-2 rounded-xl bg-efb-bg hover:bg-slate-800 border border-efb-border text-xs font-semibold text-sky-400 transition flex items-center justify-center gap-1.5">
+                  SimBrief ↗
+                </a>
+                <button onclick="openScheduleModal('${m.id}')" ${state.activeMission ? 'disabled' : ''} class="flex-1 min-h-[42px] px-4 py-2 rounded-xl bg-orange-500 hover:bg-orange-600 disabled:opacity-40 disabled:pointer-events-none text-white text-xs font-bold shadow-lg shadow-orange-500/20 transition">
+                  Programar Vuelo →
+                </button>
+              </div>
+            </article>
+          `;
+        })
+        .join('');
     }
 
     // =========================================================================
-    // 7. SCHEDULE MODAL & ACTIVE MISSION WORKFLOW
+    // 7. SCHEDULE MODAL & ACTIVE FLIGHT EFB (OOOI, TANKS, COMPLETION)
     // =========================================================================
-    function acceptMission(missionId) {
+    function addMinutesToTimeStr(hhmm, addMin) {
+      const [hStr, mStr] = hhmm.split(':');
+      const total = (parseInt(hStr, 10) * 60 + parseInt(mStr, 10) + addMin + 1440) % 1440;
+      const hh = String(Math.floor(total / 60)).padStart(2, '0');
+      const mm = String(total % 60).padStart(2, '0');
+      return `${hh}:${mm}`;
+    }
+
+    function openScheduleModal(missionId) {
       if (state.activeMission) {
         showToast('Ya tenés una orden activa en curso.', 'warn');
         return;
       }
-      const msn = generatedMissions.find(m => m.id === missionId);
-      if (!msn) return;
+      const mission = generatedMissions.find(m => m.id === missionId);
+      if (!mission) return;
 
       pendingScheduleMissionId = missionId;
-      document.getElementById('sched-modal-callsign').textContent = `${msn.callsign} • ${msn.missionType}`;
-      document.getElementById('sched-modal-title').textContent = `${msn.legs[0].orig} ➔ ${msn.legs[msn.legs.length - 1].dest} (${msn.legs.length} ${msn.legs.length === 1 ? 'tramo' : 'tramos'})`;
+      document.getElementById('sched-modal-callsign').textContent = `${state.activeReg} • ${mission.badge}`;
+      document.getElementById('sched-modal-title').textContent = mission.title;
 
       const now = new Date();
-      now.setMinutes(now.getMinutes() + 15);
-      const hh = String(now.getHours()).padStart(2, '0');
-      const mm = String(now.getMinutes()).padStart(2, '0');
-      document.getElementById('sched-report-time').value = `${hh}:${mm}`;
+      const defH = String(now.getHours()).padStart(2, '0');
+      const defM = String(Math.floor(now.getMinutes() / 5) * 5).padStart(2, '0');
+      document.getElementById('sched-report-time').value = `${defH}:${defM}`;
       document.getElementById('sched-notes').value = '';
 
       updateSchedulePreview();
@@ -1709,689 +1869,523 @@
       document.getElementById('schedule-modal').classList.add('hidden');
     }
 
-    function addMinutesToHHMM(hhmm, addMin) {
-      const [h, m] = hhmm.split(':').map(Number);
-      const total = (((h * 60 + m + addMin) % 1440) + 1440) % 1440;
-      return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
-    }
+    function computeMissionTimeline(mission, reportTime, tz, prepMin) {
+      let cursor = reportTime || '12:00';
+      const suffix = tz === 'UTC' ? 'Z' : ' LT';
+      const legTimes = [];
 
-    function computeScheduleData(msn) {
-      const reportTime = document.getElementById('sched-report-time').value || '12:00';
-      const tz = document.getElementById('sched-tz').value || 'ART';
-      const prepMin = parseInt(document.getElementById('sched-prep-min').value || '30', 10);
-      const notes = (document.getElementById('sched-notes').value || '').trim();
-
-      let cursor = addMinutesToHHMM(reportTime, prepMin);
-      const legTimes = msn.legs.map((leg, i) => {
+      cursor = addMinutesToTimeStr(cursor, prepMin);
+      mission.legs.forEach((leg, idx) => {
         const etd = cursor;
-        const eta = addMinutesToHHMM(etd, leg.eet);
-        const etdUtc = tz === 'ART' ? addMinutesToHHMM(etd, 180) : etd;
-        const etaUtc = tz === 'ART' ? addMinutesToHHMM(eta, 180) : eta;
-        cursor = addMinutesToHHMM(eta, TURNAROUND_MIN);
-        return { legIndex: i, etd, eta, etdUtc, etaUtc, tz };
+        const eta = addMinutesToTimeStr(etd, leg.eetMin);
+        const etdUtc = tz === 'UTC' ? etd : addMinutesToTimeStr(etd, 180);
+        legTimes.push({
+          idx,
+          etdDisplay: etd + suffix,
+          etaDisplay: eta + suffix,
+          etdUtc
+        });
+        cursor = addMinutesToTimeStr(eta, TURNAROUND_MIN);
       });
 
-      const endDuty = legTimes[legTimes.length - 1].eta;
-      return { reportTime, tz, prepMin, notes, legTimes, endDuty };
+      const endDuty = legTimes.length > 0 ? legTimes[legTimes.length - 1].etaDisplay : reportTime + suffix;
+      return {
+        reportDisplay: reportTime + suffix,
+        tz,
+        prepMin,
+        legTimes,
+        endDutyDisplay: endDuty
+      };
     }
 
     function updateSchedulePreview() {
-      const msn = generatedMissions.find(m => m.id === pendingScheduleMissionId);
-      if (!msn) return;
-      const sched = computeScheduleData(msn);
-      const suffix = sched.tz === 'UTC' ? 'Z' : ' LT';
+      const mission = generatedMissions.find(m => m.id === pendingScheduleMissionId);
+      if (!mission) return;
+      const reportTime = document.getElementById('sched-report-time').value || '12:00';
+      const tz = document.getElementById('sched-tz').value;
+      const prepMin = parseInt(document.getElementById('sched-prep-min').value, 10) || 30;
+      const tl = computeMissionTimeline(mission, reportTime, tz, prepMin);
 
-      const rows = sched.legTimes
-        .map((lt, idx) => {
-          const leg = msn.legs[idx];
-          return `
-            <div class="flex items-center justify-between gap-2 py-1 border-b border-efb-border/60 last:border-b-0">
-              <span class="text-slate-300">T${idx + 1}: <strong class="text-white">${leg.orig} ➔ ${leg.dest}</strong></span>
-              <span class="text-emerald-400">ETD ${lt.etd}${suffix} • ETA ${lt.eta}${suffix}</span>
-            </div>
-          `;
-        })
-        .join('');
-
-      document.getElementById('sched-timeline-preview').innerHTML = `
-        <div class="flex items-center justify-between text-slate-400 pb-1 border-b border-efb-border">
-          <span>Presentación FBO: <strong class="text-white">${sched.reportTime}${suffix}</strong></span>
-          <span>Fin Servicio: <strong class="text-orange-400">${sched.endDuty}${suffix}</strong></span>
+      const previewEl = document.getElementById('sched-timeline-preview');
+      previewEl.innerHTML = `
+        <div class="flex justify-between text-slate-400 border-b border-efb-border pb-1.5">
+          <span>PRESENTACIÓN FBO: <strong class="text-white">${tl.reportDisplay}</strong></span>
+          <span>FIN SERVICIO: <strong class="text-emerald-400">${tl.endDutyDisplay}</strong></span>
         </div>
-        ${rows}
+        <div class="space-y-1 pt-1">
+          ${tl.legTimes
+            .map((lt, i) => {
+              const l = mission.legs[i];
+              return `<div class="flex justify-between text-slate-300">
+                <span>T${i + 1} ${l.from} ➔ ${l.to} (${l.pax} PAX)</span>
+                <span>ETD <strong class="text-orange-400">${lt.etdDisplay}</strong> • ETA <strong class="text-white">${lt.etaDisplay}</strong></span>
+              </div>`;
+            })
+            .join('')}
+        </div>
       `;
     }
 
     function confirmScheduleAndStart() {
-      const msn = generatedMissions.find(m => m.id === pendingScheduleMissionId);
-      if (!msn) return;
-      const sched = computeScheduleData(msn);
+      const mission = generatedMissions.find(m => m.id === pendingScheduleMissionId);
+      if (!mission) return;
 
-      const cloned = JSON.parse(JSON.stringify(msn));
-      cloned.schedule = sched;
+      const reportTime = document.getElementById('sched-report-time').value || '12:00';
+      const tz = document.getElementById('sched-tz').value;
+      const prepMin = parseInt(document.getElementById('sched-prep-min').value, 10) || 30;
+      const notes = document.getElementById('sched-notes').value.trim();
+      const timeline = computeMissionTimeline(mission, reportTime, tz, prepMin);
+
+      const cloned = JSON.parse(JSON.stringify(mission));
+      cloned.aircraftReg = state.activeReg;
       cloned.currentLegIndex = 0;
-      cloned.oooi = cloned.legs.map(() => ({ out: '', off: '', on: '', in: '' }));
+      cloned.schedule = Object.assign({}, timeline, { notes });
 
       state.activeMission = cloned;
-      closeScheduleModal();
       saveState();
+      closeScheduleModal();
       renderAll();
       setTab('active');
-      showToast(`Orden ${cloned.callsign} iniciada. Presentación ${sched.reportTime} ${sched.tz}.`, 'success');
+      showToast(`Orden iniciada para ${state.activeReg}. ¡Buenos vuelos!`, 'success');
     }
 
-    function recordOooi(point) {
+    function recordOOOI(key) {
       if (!state.activeMission) return;
-      const idx = state.activeMission.currentLegIndex;
+      const leg = state.activeMission.legs[state.activeMission.currentLegIndex];
+      if (!leg) return;
       const now = new Date();
-      const stamp = `${String(now.getUTCHours()).padStart(2, '0')}:${String(now.getUTCMinutes()).padStart(2, '0')}Z`;
-      state.activeMission.oooi[idx][point] = stamp;
+      const utcStr = `${String(now.getUTCHours()).padStart(2, '0')}:${String(now.getUTCMinutes()).padStart(2, '0')}Z`;
+      leg.oooi[key] = utcStr;
       saveState();
       renderActiveFlight();
-      showToast(`Registrado ${point.toUpperCase()}: ${stamp}`, 'success');
+      showToast(`Hito ${key.toUpperCase()} registrado: ${utcStr}`, 'success');
     }
 
-    function completeCurrentLeg() {
-      const msn = state.activeMission;
-      if (!msn) return;
-      const idx = msn.currentLegIndex;
-      const leg = msn.legs[idx];
-      const oooi = msn.oooi[idx] || {};
-      const ac = state.fleet[msn.reg];
+    function completeActiveLeg() {
+      const m = state.activeMission;
+      if (!m) return;
+      const idx = m.currentLegIndex;
+      const leg = m.legs[idx];
+      const ac = state.fleet[m.aircraftReg];
 
-      const flownHours = +(leg.eet / 60).toFixed(2);
-      ac.location = leg.dest;
-      ac.totalHours = +(ac.totalHours + flownHours).toFixed(2);
-      ac.hoursUntilInspection = Math.max(0, +(ac.hoursUntilInspection - flownHours).toFixed(2));
+      const hoursLogged = Number((leg.eetMin / 60).toFixed(2));
+      ac.location = leg.to;
+      ac.totalHours = Number((ac.totalHours + hoursLogged).toFixed(2));
+      ac.hoursUntilInspection = Math.max(0, Number((ac.hoursUntilInspection - hoursLogged).toFixed(2)));
+      state.pilotLocation = leg.to;
 
-      if (leg.dest === 'SADF') {
+      if (leg.to === 'SADF') {
         ac.legsAway = 0;
         ac.hoursAway = 0;
       } else {
         ac.legsAway += 1;
-        ac.hoursAway = +(ac.hoursAway + flownHours).toFixed(2);
+        ac.hoursAway = Number((ac.hoursAway + hoursLogged).toFixed(2));
       }
 
-      state.pilotLocation = leg.dest;
-
       state.logbook.unshift({
-        id: 'LOG-' + Date.now(),
+        id: 'log_' + Date.now(),
         date: new Date().toISOString().slice(0, 10),
-        reg: msn.reg,
-        orig: leg.orig,
-        dest: leg.dest,
-        dist: leg.dist,
-        eet: leg.eet,
-        flownHours,
-        legType: leg.legType,
+        reg: m.aircraftReg,
+        from: leg.from,
+        to: leg.to,
+        role: leg.role,
         pax: leg.pax,
-        fuelLbs: leg.fuelLbs,
-        oooi
+        distNM: leg.distNM,
+        hours: hoursLogged,
+        oooi: Object.assign({}, leg.oooi)
       });
 
-      if (idx + 1 < msn.legs.length) {
-        msn.currentLegIndex = idx + 1;
+      if (idx + 1 < m.legs.length) {
+        m.currentLegIndex += 1;
         saveState();
         renderAll();
-        showToast(`Tramo ${idx + 1} completado en ${leg.dest}. Listo para Tramo ${idx + 2}.`, 'success');
+        showToast(`Tramo completado en ${leg.to}. Listo para el tramo #${m.currentLegIndex + 1}.`, 'success');
       } else {
         state.activeMission = null;
         saveState();
         renderAll();
         generateDispatches();
         setTab('dispatch');
-        showToast(`Orden completada. Aeronave ${msn.reg} estacionada en ${leg.dest}.`, 'success');
+        showToast(`¡Rotación completada! Aeronave estacionada en ${leg.to}.`, 'success');
       }
     }
 
-    function cancelOrPauseMission() {
-      const msn = state.activeMission;
-      if (!msn) return;
-      const currentAp = msn.legs[msn.currentLegIndex].orig;
+    function pauseActiveMission() {
+      if (!state.activeMission) return;
+      const loc = state.pilotLocation;
       openConfirmModal(
-        'Pausar / Finalizar Orden Aquí',
-        `El avión ${msn.reg} quedará estacionado físicamente en ${currentAp} (${AIRPORTS[currentAp].city}) y se cancelarán los tramos pendientes. ¿Confirmás?`,
+        'Pausar y Cerrar Orden Aquí',
+        `El ${state.activeMission.aircraftReg} quedará estacionado físicamente en ${loc} (${AIRPORTS[loc].city}) y se cancelarán los tramos pendientes.`,
         () => {
           state.activeMission = null;
           saveState();
           renderAll();
           generateDispatches();
           setTab('dispatch');
-          showToast(`Orden finalizada. ${msn.reg} permanece en ${currentAp}.`, 'warn');
+          showToast(`Orden cerrada. Aeronave estacionada en ${loc}.`, 'warn');
         }
       );
     }
 
-    // =========================================================================
-    // 8. FLEET, MAINTENANCE & SCENERY ACTIONS
-    // =========================================================================
-    function selectAircraft(reg) {
-      if (state.activeMission) {
-        showToast('No podés cambiar de aeronave con una orden activa en curso.', 'error');
-        return;
-      }
-      if (state.pilotLocation !== 'SADF') {
-        showToast(`Sin teletransporte: estás en ${state.pilotLocation}. Volvé a SADF para cambiar de avión.`, 'error');
-        return;
-      }
-      if (state.fleet[reg].location !== 'SADF') {
-        showToast(`El ${reg} se encuentra en ${state.fleet[reg].location}, no en SADF.`, 'error');
-        return;
-      }
-      state.activeReg = reg;
-      saveState();
-      renderAll();
-      generateDispatches();
-      showToast(`Aeronave activa: ${reg} (${state.fleet[reg].shortRole}).`, 'success');
-    }
-
-    function performHangarInspection(reg) {
-      const ac = state.fleet[reg];
-      if (!ac || ac.location !== 'SADF') {
-        showToast('La inspección de fase solo se realiza en el hangar de San Fernando (SADF).', 'error');
-        return;
-      }
-      ac.hoursUntilInspection = PHASE_INSPECTION_HOURS;
-      ac.inspectionsCompleted = (ac.inspectionsCompleted || 0) + 1;
-      saveState();
-      renderAll();
-      generateDispatches();
-      showToast(`Inspección de fase completada en SADF para ${reg}. Remanente: 25.0 hs.`, 'success');
-    }
-
-    function toggleScenery(icao) {
-      if (icao === 'SADF') {
-        showToast('SADF es tu base operativa y permanece siempre activa.', 'warn');
-        return;
-      }
-      state.enabledSceneries[icao] = !isSceneryEnabled(icao);
-      saveState();
-      renderSceneryList();
-      updateBadges();
-      generateDispatches();
-    }
-
-    function bulkToggleSceneries(mode) {
-      Object.keys(AIRPORTS).forEach(icao => {
-        if (icao === 'SADF') {
-          state.enabledSceneries[icao] = true;
-        } else if (mode === 'all_on') {
-          state.enabledSceneries[icao] = true;
-        } else if (mode === 'regional_only') {
-          const ap = AIRPORTS[icao];
-          state.enabledSceneries[icao] = ap.country === 'ARG' || ap.country === 'URY' || ap.country === 'CHL';
-        }
-      });
-      saveState();
-      renderSceneryList();
-      updateBadges();
-      generateDispatches();
-      showToast(mode === 'all_on' ? 'Todos los escenarios MSFS 2024 habilitados.' : 'Filtrado a Argentina, Uruguay y Chile.', 'success');
-    }
-
-    function setSceneryFilter(filter) {
-      state.sceneryFilter = filter;
-      renderSceneryList();
-    }
-
-    function setMapZoom(zoom) {
-      state.mapZoom = zoom;
-      renderFleetView();
-    }
-
-    // =========================================================================
-    // 9. RENDER FUNCTIONS
-    // =========================================================================
-    function renderSceneryPill(icao) {
-      const ap = AIRPORTS[icao];
-      if (!ap) return '';
-      return `
-        <div class="flex items-center justify-between gap-2 pt-1 border-t border-efb-border/50">
-          <span class="text-slate-400 truncate">MSFS 2024: <strong class="text-slate-200">${ap.dev}</strong></span>
-          <a href="${ap.url}" target="_blank" rel="noopener noreferrer" class="text-sky-400 hover:text-sky-300 underline shrink-0">SceneryAddons ↗</a>
-        </div>
-      `;
-    }
-
-    function renderHeaderAndStrip() {
-      const atBase = state.pilotLocation === 'SADF';
-      const ac = state.fleet[state.activeReg];
-
-      document.getElementById('header-aircraft-switcher').innerHTML = ['LV-BPA', 'LV-IYQ']
-        .map(reg => {
-          const active = state.activeReg === reg;
-          const locked = !atBase && !active;
-          return `
-            <button onclick="selectAircraft('${reg}')" class="min-h-[32px] px-2.5 py-1 rounded-lg font-mono text-xs font-bold transition flex items-center gap-1 ${
-              active
-                ? 'bg-orange-500 text-white shadow'
-                : locked
-                ? 'text-slate-500 cursor-not-allowed'
-                : 'text-slate-300 hover:bg-slate-800'
-            }" title="${locked ? 'Volvé a SADF para cambiar de avión' : state.fleet[reg].shortRole}">
-              <span>${reg}</span>
-              ${locked ? '<span class="text-[10px]">🔒</span>' : ''}
-            </button>
-          `;
-        })
-        .join('');
-
-      document.getElementById('strip-location').textContent = `${state.pilotLocation} (${AIRPORTS[state.pilotLocation]?.city || ''})`;
-      document.getElementById('strip-aircraft').textContent = `${state.activeReg} • ${ac.shortRole}`;
-      document.getElementById('strip-away').textContent =
-        ac.location === 'SADF' ? 'En Base (SADF)' : `${ac.legsAway}T / ${ac.hoursAway.toFixed(1)}h fuera`;
-
-      const inspEl = document.getElementById('strip-inspection');
-      inspEl.textContent = `${ac.hoursUntilInspection.toFixed(1)}h`;
-      inspEl.className =
-        ac.hoursUntilInspection <= 4.5
-          ? 'text-rose-400 font-bold'
-          : ac.hoursUntilInspection <= 10
-          ? 'text-amber-300 font-bold'
-          : 'text-emerald-400';
-
-      const returnAlert = document.getElementById('strip-return-alert');
-      const showReturn = ac.location !== 'SADF' && (ac.legsAway >= 3 || ac.hoursAway >= 6 || ac.hoursUntilInspection <= 4.5);
-      returnAlert.classList.toggle('hidden', !showReturn);
-      returnAlert.classList.toggle('flex', showReturn);
-    }
-
-    function updateBadges() {
-      const enabledCount = Object.keys(AIRPORTS).filter(isSceneryEnabled).length;
-      const totalCount = Object.keys(AIRPORTS).length;
-      const scBadge = document.getElementById('scenery-badge');
-      if (scBadge) scBadge.textContent = `${enabledCount}/${totalCount}`;
-
-      const logBadge = document.getElementById('logbook-badge');
-      if (logBadge) logBadge.textContent = String(state.logbook.length);
-
-      const dot = document.getElementById('active-mission-dot');
-      if (dot) dot.classList.toggle('hidden', !state.activeMission);
-
-      const warn = document.getElementById('dispatch-active-warning');
-      if (warn) warn.classList.toggle('hidden', !state.activeMission);
-    }
-
-    function renderDispatchList() {
-      const container = document.getElementById('dispatch-list');
-      if (!generatedMissions.length) {
-        container.innerHTML = `
-          <div class="col-span-full bg-efb-panel border border-efb-border rounded-2xl p-8 text-center space-y-2">
-            <p class="text-sm font-bold text-white">No hay rutas disponibles con los filtros actuales</p>
-            <p class="text-xs text-slate-400">Probá activar más escenarios MSFS 2024 o ajustar el tiempo objetivo.</p>
-          </div>
-        `;
-        return;
-      }
-
-      container.innerHTML = generatedMissions
-        .map(m => {
-          const badgeCls = getBadgeStyle(m.missionType);
-          const routeStops = [m.legs[0].orig, ...m.legs.map(l => l.dest)];
-          const routeTitle = routeStops.join(' ➔ ');
-
-          const legsHtml = m.legs
-            .map((leg, i) => {
-              const perf = calcLJ35Performance(leg);
-              const atsRoute = buildSuggestedAtsRoute(leg.orig, leg.dest);
-              return `
-                <div class="bg-efb-bg border border-efb-border/80 rounded-xl p-3 space-y-2">
-                  <div class="flex flex-wrap items-center justify-between gap-2 font-mono text-xs">
-                    <div class="flex items-center gap-1.5 flex-wrap">
-                      <span class="px-1.5 py-0.5 rounded bg-efb-panel text-slate-400 text-[10px]">T${i + 1}</span>
-                      <span class="text-[10px] font-bold px-1.5 py-0.5 rounded border ${getBadgeStyle(leg.legType)}">${leg.legType}</span>
-                      <span class="text-white font-bold">${leg.orig}</span>
-                      <span class="text-orange-500">➔</span>
-                      <span class="text-white font-bold">${leg.dest}</span>
-                      <span class="text-slate-400">(${AIRPORTS[leg.dest].city})</span>
-                    </div>
-                    <span class="text-[11px] font-semibold ${leg.pax === 0 ? 'text-slate-400' : 'text-amber-300'}">${leg.paxLabel}</span>
-                  </div>
-                  ${leg.legBrief ? `<p class="text-[11px] text-slate-400 leading-snug">${leg.legBrief}</p>` : ''}
-                  <div class="grid grid-cols-4 gap-2 font-mono text-[11px] text-slate-300 pt-1.5 border-t border-efb-border/60">
-                    <div><span class="text-slate-500 block text-[9px]">DIST</span>${leg.dist} NM</div>
-                    <div><span class="text-slate-500 block text-[9px]">EET</span>${formatMin(leg.eet)}</div>
-                    <div><span class="text-slate-500 block text-[9px]">NIVEL</span><span class="text-emerald-400">${leg.fl}</span></div>
-                    <div><span class="text-slate-500 block text-[9px]">FUEL</span>${leg.fuelLbs} lb</div>
-                  </div>
-                  <details class="group pt-1 border-t border-efb-border/50">
-                    <summary class="list-none cursor-pointer flex items-center justify-between text-[11px] font-mono text-slate-400 hover:text-slate-200 select-none py-0.5">
-                      <span>Tanques, V-Speeds y Escenario MSFS 2024</span>
-                      <span class="text-orange-400 group-open:rotate-180 transition-transform">▾</span>
-                    </summary>
-                    <div class="pt-2 space-y-2 font-mono text-[10px] text-slate-300">
-                      <div><span class="text-slate-500">TANQUES LJ35:</span> Wing ${perf.tanks.wingTotal} lb • Tip ${perf.tanks.tipTotal} lb • Fuselage ${perf.tanks.fuselage} lb</div>
-                      <div><span class="text-slate-500">${perf.flaps}:</span> V1 ${perf.v1} / VR ${perf.vr} / V2 ${perf.v2} kt • VREF ${perf.vref} kt</div>
-                      <div class="text-slate-400 truncate" title="${atsRoute}"><span class="text-slate-500">ATS:</span> ${atsRoute}</div>
-                      ${renderSceneryPill(leg.dest)}
-                    </div>
-                  </details>
-                </div>
-                ${
-                  i < m.legs.length - 1
-                    ? `<div class="flex items-center justify-center gap-2 text-[10px] font-mono text-amber-400/90 py-0.5">
-                        <span class="h-px w-6 bg-amber-500/30"></span>
-                        <span>⏱ ESCALA (${leg.dest}): ${TURNAROUND_MIN} MIN</span>
-                        <span class="h-px w-6 bg-amber-500/30"></span>
-                      </div>`
-                    : ''
-                }
-              `;
-            })
-            .join('');
-
-          return `
-            <article class="bg-efb-panel border border-efb-border hover:border-slate-600 rounded-2xl p-4 sm:p-5 flex flex-col justify-between gap-4 transition">
-              <div class="space-y-3">
-                <div class="flex items-start justify-between gap-2">
-                  <div class="min-w-0">
-                    <div class="flex items-center gap-2 flex-wrap">
-                      <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded border ${badgeCls}">${m.missionType}</span>
-                      <span class="font-mono text-xs text-slate-400">${m.callsign} • ${m.reg}</span>
-                    </div>
-                    <h3 class="font-mono text-sm sm:text-base font-bold text-white mt-1.5 break-words">${routeTitle}</h3>
-                  </div>
-                  <div class="text-right font-mono shrink-0">
-                    <span class="text-sm font-bold text-orange-400 block">${formatMin(m.blockMin)}</span>
-                    <span class="text-[10px] text-slate-400 block">${m.totalDist} NM • ${m.legs.length}T</span>
-                    <span class="inline-block mt-1 text-[10px] px-1.5 py-0.5 rounded border ${
-                      Math.abs(m.diffMin) <= 15
-                        ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/35'
-                        : 'bg-amber-500/15 text-amber-300 border-amber-500/35'
-                    }">
-                      ${m.diffMin === 0 ? 'Exacto' : `${m.diffMin > 0 ? '+' : ''}${m.diffMin}m`}
-                    </span>
-                  </div>
-                </div>
-
-                <p class="text-xs text-slate-300 leading-relaxed bg-efb-bg/60 border border-efb-border/60 rounded-xl p-3">${m.narrative}</p>
-
-                <div class="space-y-2">${legsHtml}</div>
-              </div>
-
-              <div class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-efb-border">
-                <a href="${buildSimBriefUrl(m.legs[0])}" target="_blank" rel="noopener noreferrer" class="min-h-[42px] px-3.5 py-2 rounded-xl bg-efb-bg hover:bg-slate-800 border border-efb-border text-xs font-semibold text-sky-300 transition inline-flex items-center">
-                  SimBrief ↗
-                </a>
-                <button onclick="acceptMission('${m.id}')" ${state.activeMission ? 'disabled' : ''} class="min-h-[42px] px-4 py-2 rounded-xl text-xs font-bold transition ${
-                  state.activeMission
-                    ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
-                    : 'bg-orange-500 hover:bg-orange-600 text-white shadow-lg shadow-orange-500/20'
-                }">
-                  Programar Vuelo →
-                </button>
-              </div>
-            </article>
-          `;
-        })
-        .join('');
-    }
-
     function renderActiveFlight() {
       const container = document.getElementById('active-flight-container');
-      const msn = state.activeMission;
+      const m = state.activeMission;
 
-      if (!msn) {
+      if (!m) {
         container.innerHTML = `
           <div class="bg-efb-panel border border-efb-border rounded-2xl p-8 text-center space-y-3">
             <div class="w-12 h-12 rounded-2xl bg-efb-bg border border-efb-border mx-auto flex items-center justify-center text-slate-400">
               <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
             </div>
-            <h3 class="text-base font-bold text-white">No hay ningún vuelo activo en curso</h3>
-            <p class="text-xs text-slate-400 max-w-md mx-auto">Seleccioná y programá una orden desde la pestaña <strong>Despacho</strong> para cargar el plan de vuelo, reparto de tanques y tiempos OOOI.</p>
-            <button onclick="setTab('dispatch')" class="min-h-[42px] px-5 py-2 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold transition">Ir a Despacho</button>
+            <h3 class="text-base font-bold text-white">No hay ningún vuelo activo en cabina</h3>
+            <p class="text-xs text-slate-400 max-w-md mx-auto">Generá una orden en la pestaña Despacho y programá tu horario de presentación para iniciar el EFB de vuelo.</p>
+            <button onclick="setTab('dispatch')" class="min-h-[42px] px-5 py-2 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold transition">
+              Ir a Despacho →
+            </button>
           </div>
         `;
         return;
       }
 
-      const idx = msn.currentLegIndex;
-      const leg = msn.legs[idx];
-      const oooi = msn.oooi[idx] || { out: '', off: '', on: '', in: '' };
-      const perf = calcLJ35Performance(leg);
-      const origFbo = getFboInfo(leg.orig);
-      const destFbo = getFboInfo(leg.dest);
-      const atsRoute = buildSuggestedAtsRoute(leg.orig, leg.dest);
-      const legSched = msn.schedule?.legTimes?.[idx];
-      const suffix = msn.schedule?.tz === 'UTC' ? 'Z' : ' LT';
-      const sbUrl = buildSimBriefUrl(leg, legSched?.etdUtc);
+      const idx = m.currentLegIndex;
+      const leg = m.legs[idx];
+      const orig = AIRPORTS[leg.from];
+      const dest = AIRPORTS[leg.to];
+      const origFbo = FBO_DATA[leg.from] || { fbo: 'Plataforma Aviación General / FBO', atis: '127.60', gnd: '121.90', twr: '118.10', app: '119.50' };
+      const destFbo = FBO_DATA[leg.to] || { fbo: 'Plataforma Aviación General / FBO', atis: '127.60', gnd: '121.90', twr: '118.10', app: '119.50' };
+      const schedLeg = m.schedule && m.schedule.legTimes ? m.schedule.legTimes[idx] : null;
+      const sbUrl = buildSimBriefUrl(leg, m.aircraftReg, schedLeg ? schedLeg.etdUtc : '');
+      const isLastLeg = idx === m.legs.length - 1;
 
       container.innerHTML = `
-        <div class="bg-efb-panel border border-efb-border rounded-2xl p-4 sm:p-6 space-y-5">
+        <div class="bg-efb-panel border border-efb-border rounded-2xl p-4 sm:p-5 space-y-5">
+          <!-- Header -->
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-efb-border pb-4">
             <div>
-              <div class="flex items-center gap-2 flex-wrap">
-                <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded border ${getBadgeStyle(leg.legType)}">TRAMO ${idx + 1} DE ${msn.legs.length} • ${leg.legType}</span>
-                <span class="font-mono text-xs text-orange-400 font-bold">${msn.reg}</span>
+              <div class="flex flex-wrap items-center gap-2">
+                <span class="text-[11px] font-mono font-bold px-2 py-0.5 rounded bg-orange-500/15 text-orange-300 border border-orange-500/35">TRAMO ${idx + 1} DE ${m.legs.length}</span>
+                <span class="text-[11px] font-mono font-bold px-2 py-0.5 rounded border ${getBadgeStyle(leg.role)}">${leg.role}</span>
+                <span class="text-xs font-mono text-slate-400">${m.aircraftReg}</span>
               </div>
-              <h2 class="font-mono text-lg sm:text-xl font-bold text-white mt-1.5">${leg.orig} (${AIRPORTS[leg.orig].city}) ➔ ${leg.dest} (${AIRPORTS[leg.dest].city})</h2>
-              <p class="text-xs text-slate-400 mt-0.5">${leg.legBrief || msn.narrative}</p>
+              <h2 class="text-lg sm:text-xl font-bold text-white mt-1.5">${orig.icao} (${orig.city}) ➔ ${dest.icao} (${dest.city})</h2>
+              <p class="text-xs text-slate-400 mt-0.5">${leg.note}</p>
             </div>
-            <div class="font-mono text-xs bg-efb-bg border border-efb-border rounded-xl p-3 space-y-1 shrink-0">
-              ${legSched ? `<div><span class="text-slate-500">ETD / ETA:</span> <strong class="text-emerald-400">${legSched.etd}${suffix} ➔ ${legSched.eta}${suffix}</strong></div>` : ''}
-              <div><span class="text-slate-500">NIVEL / DIST:</span> <strong class="text-white">${leg.fl} • ${leg.dist} NM (${formatMin(leg.eet)})</strong></div>
-              <div><span class="text-slate-500">CARGA:</span> <strong class="text-amber-300">${leg.paxLabel}</strong></div>
+            <div class="flex sm:flex-col items-center sm:items-end justify-between gap-1 font-mono bg-efb-bg px-3.5 py-2.5 rounded-xl border border-efb-border shrink-0">
+              <span class="text-xs text-slate-400">ETD <strong class="text-orange-400">${schedLeg ? schedLeg.etdDisplay : '--:--'}</strong></span>
+              <span class="text-xs text-slate-400">ETA <strong class="text-white">${schedLeg ? schedLeg.etaDisplay : '--:--'}</strong></span>
+              <span class="text-[11px] text-emerald-400">${leg.fl} • ${formatMinutes(leg.eetMin)} • ${leg.distNM} NM</span>
             </div>
           </div>
 
-          ${msn.schedule?.notes ? `<div class="bg-amber-500/10 border border-amber-500/30 rounded-xl px-3.5 py-2 text-xs text-amber-200"><strong>Nota FBO:</strong> ${msn.schedule.notes}</div>` : ''}
+          ${
+            m.schedule && m.schedule.notes
+              ? `<div class="bg-amber-500/10 border border-amber-500/30 rounded-xl px-3.5 py-2 text-xs text-amber-200"><strong>Nota Handling:</strong> ${m.schedule.notes}</div>`
+              : ''
+          }
 
-          <div class="bg-efb-bg border border-efb-border rounded-xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <!-- ATS Route Bar -->
+          <div class="bg-efb-bg border border-efb-border rounded-xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div class="min-w-0">
-              <span class="text-[10px] font-mono uppercase text-slate-500 block">Ruta ATS Sugerida (FMC / SimBrief)</span>
-              <code class="text-xs font-mono text-emerald-300 break-all">${atsRoute}</code>
+              <span class="text-[10px] font-mono uppercase tracking-wider text-slate-500 block">Ruta ATS Sugerida (FMC / GTN750)</span>
+              <code class="text-xs font-mono text-sky-300 break-all">${leg.atsRoute}</code>
             </div>
-            <button onclick="copyText('${atsRoute}')" class="min-h-[36px] px-3 py-1.5 rounded-lg bg-efb-panel hover:bg-slate-800 border border-efb-border text-xs font-mono text-slate-200 shrink-0 transition">Copiar Ruta</button>
+            <button data-route="${leg.atsRoute}" onclick="copyText(this.getAttribute('data-route'), 'Ruta ATS')" class="min-h-[36px] px-3 py-1.5 rounded-lg bg-efb-panel hover:bg-slate-800 border border-efb-border text-xs font-semibold text-slate-200 shrink-0 transition">
+              Copiar Ruta
+            </button>
           </div>
 
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-3 font-mono text-xs">
-            <div class="bg-efb-bg border border-efb-border rounded-xl p-3.5 space-y-1.5">
-              <span class="text-[10px] text-slate-500 block">ORIGEN • ${leg.orig} (Elev ${AIRPORTS[leg.orig].elev} ft • Rwy ${AIRPORTS[leg.orig].rwyFt} ft)</span>
-              <span class="text-white font-semibold block">${origFbo.fbo}</span>
-              <div class="text-[11px] text-slate-300 pt-1">ATIS ${origFbo.atis} • GND ${origFbo.gnd} • TWR ${origFbo.twr} • APP ${origFbo.app}</div>
+          <!-- Origin & Destination FBO Cards -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+            <div class="bg-efb-bg border border-efb-border rounded-xl p-3.5 space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="text-[10px] font-mono font-bold text-slate-400">SALIDA • ${orig.icao}</span>
+                <span class="text-[10px] font-mono text-slate-400">Elev ${orig.elev} ft • Rwy ${orig.rwyFt} ft</span>
+              </div>
+              <p class="text-xs font-bold text-white">${origFbo.fbo}</p>
+              <div class="grid grid-cols-4 gap-1.5 font-mono text-[11px] pt-1">
+                <div class="bg-efb-panel p-1.5 rounded-lg text-center"><span class="text-[9px] text-slate-500 block">ATIS</span>${origFbo.atis}</div>
+                <div class="bg-efb-panel p-1.5 rounded-lg text-center"><span class="text-[9px] text-slate-500 block">GND</span>${origFbo.gnd}</div>
+                <div class="bg-efb-panel p-1.5 rounded-lg text-center"><span class="text-[9px] text-slate-500 block">TWR</span>${origFbo.twr}</div>
+                <div class="bg-efb-panel p-1.5 rounded-lg text-center"><span class="text-[9px] text-slate-500 block">APP</span>${origFbo.app}</div>
+              </div>
             </div>
-            <div class="bg-efb-bg border border-efb-border rounded-xl p-3.5 space-y-1.5">
-              <span class="text-[10px] text-slate-500 block">DESTINO • ${leg.dest} (Elev ${AIRPORTS[leg.dest].elev} ft • Rwy ${AIRPORTS[leg.dest].rwyFt} ft)</span>
-              <span class="text-white font-semibold block">${destFbo.fbo}</span>
-              <div class="text-[11px] text-slate-300 pt-1">ATIS ${destFbo.atis} • GND ${destFbo.gnd} • TWR ${destFbo.twr} • APP ${destFbo.app}</div>
-              ${renderSceneryPill(leg.dest)}
+
+            <div class="bg-efb-bg border border-efb-border rounded-xl p-3.5 space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="text-[10px] font-mono font-bold text-orange-400">DESTINO • ${dest.icao}</span>
+                <a href="${dest.url}" target="_blank" rel="noopener" class="text-[10px] font-mono text-sky-400 hover:underline">${dest.dev} ↗</a>
+              </div>
+              <p class="text-xs font-bold text-white">${destFbo.fbo}</p>
+              <div class="grid grid-cols-4 gap-1.5 font-mono text-[11px] pt-1">
+                <div class="bg-efb-panel p-1.5 rounded-lg text-center"><span class="text-[9px] text-slate-500 block">ATIS</span>${destFbo.atis}</div>
+                <div class="bg-efb-panel p-1.5 rounded-lg text-center"><span class="text-[9px] text-slate-500 block">GND</span>${destFbo.gnd}</div>
+                <div class="bg-efb-panel p-1.5 rounded-lg text-center"><span class="text-[9px] text-slate-500 block">TWR</span>${destFbo.twr}</div>
+                <div class="bg-efb-panel p-1.5 rounded-lg text-center"><span class="text-[9px] text-slate-500 block">APP</span>${destFbo.app}</div>
+              </div>
             </div>
           </div>
 
-          <div class="bg-efb-bg border border-efb-border rounded-xl p-4 space-y-3 font-mono text-xs">
+          <!-- Learjet 35A Fuel & Performance -->
+          <div class="bg-efb-bg border border-efb-border rounded-xl p-4 space-y-3">
             <div class="flex flex-wrap items-center justify-between gap-2">
-              <span class="font-bold text-white">Performance & Reparto de Tanques (Learjet 35A)</span>
-              <span class="text-[11px] px-2 py-0.5 rounded bg-orange-500/15 text-orange-300 border border-orange-500/35">${perf.flaps}</span>
+              <span class="text-xs font-bold text-white">Performance & Reparto de Tanques (Learjet 35A)</span>
+              <span class="text-[11px] font-mono text-orange-400">BLOCK FUEL: ${leg.perf.blockLb} LB</span>
             </div>
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-[11px]">
-              <div class="bg-efb-panel p-2.5 rounded-lg border border-efb-border">
-                <span class="text-slate-500 block text-[9px]">WING TANKS (L+R)</span>
-                <strong class="text-white">${perf.tanks.wingTotal} lb</strong> <span class="text-slate-400">(${perf.tanks.wingEach} c/u)</span>
+            <div class="grid grid-cols-3 sm:grid-cols-6 gap-2 font-mono text-xs">
+              <div class="bg-efb-panel border border-efb-border rounded-lg p-2">
+                <span class="text-[9px] text-slate-400 block">WINGS (L+R)</span>
+                <strong class="text-white">${leg.perf.wingLb} lb</strong>
               </div>
-              <div class="bg-efb-panel p-2.5 rounded-lg border border-efb-border">
-                <span class="text-slate-500 block text-[9px]">TIP TANKS (L+R)</span>
-                <strong class="text-white">${perf.tanks.tipTotal} lb</strong> <span class="text-slate-400">(${perf.tanks.tipEach} c/u)</span>
+              <div class="bg-efb-panel border border-efb-border rounded-lg p-2">
+                <span class="text-[9px] text-slate-400 block">TIPS (L+R)</span>
+                <strong class="text-white">${leg.perf.tipLb} lb</strong>
               </div>
-              <div class="bg-efb-panel p-2.5 rounded-lg border border-efb-border">
-                <span class="text-slate-500 block text-[9px]">FUSELAGE TANK</span>
-                <strong class="text-white">${perf.tanks.fuselage} lb</strong> <span class="text-slate-400">(Total ${leg.fuelLbs} lb)</span>
+              <div class="bg-efb-panel border border-efb-border rounded-lg p-2">
+                <span class="text-[9px] text-slate-400 block">FUSELAGE</span>
+                <strong class="text-white">${leg.perf.fuselageLb} lb</strong>
               </div>
-              <div class="bg-efb-panel p-2.5 rounded-lg border border-efb-border">
-                <span class="text-slate-500 block text-[9px]">PESOS (ZFW/TOW/ELW)</span>
-                <strong class="text-white">${perf.zfw} / ${perf.tow} / ${perf.elw}</strong>
+              <div class="bg-efb-panel border border-efb-border rounded-lg p-2">
+                <span class="text-[9px] text-slate-400 block">TOW / ELW</span>
+                <strong class="${leg.perf.mlwWarning ? 'text-rose-400' : 'text-emerald-400'}">${(leg.perf.towLb / 1000).toFixed(1)}k / ${(leg.perf.elwLb / 1000).toFixed(1)}k</strong>
               </div>
-            </div>
-            <div class="flex flex-wrap items-center justify-between gap-2 pt-1 text-[11px] text-slate-300">
-              <span>DESPEGUE: <strong class="text-emerald-400">V1 ${perf.v1} kt • VR ${perf.vr} kt • V2 ${perf.v2} kt</strong></span>
-              <span>ATERRIZAJE: <strong class="text-sky-400">VREF ${perf.vref} kt • VAPP ${perf.vapp} kt</strong></span>
+              <div class="bg-efb-panel border border-efb-border rounded-lg p-2">
+                <span class="text-[9px] text-slate-400 block">${leg.perf.toFlaps}</span>
+                <strong class="text-orange-300">${leg.perf.v1}/${leg.perf.vr}/${leg.perf.v2}</strong>
+              </div>
+              <div class="bg-efb-panel border border-efb-border rounded-lg p-2">
+                <span class="text-[9px] text-slate-400 block">VREF / VAPP</span>
+                <strong class="text-sky-300">${leg.perf.vref} / ${leg.perf.vapp} kt</strong>
+              </div>
             </div>
           </div>
 
+          <!-- OOOI Live Buttons -->
           <div class="bg-efb-bg border border-efb-border rounded-xl p-4 space-y-2.5">
-            <span class="text-[11px] font-mono font-bold text-slate-300 block">Registro OOOI en Vivo (Calzos / Despegue / Aterrizaje)</span>
-            <div class="grid grid-cols-4 gap-2 font-mono text-xs">
+            <span class="text-xs font-bold text-white block">Registro OOOI en Vivo (Calzos / Despegue / Aterrizaje)</span>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
               ${['out', 'off', 'on', 'in']
-                .map(
-                  pt => `
-                  <button onclick="recordOooi('${pt}')" class="min-h-[48px] p-2 rounded-xl border transition flex flex-col items-center justify-center ${
-                    oooi[pt]
-                      ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
-                      : 'bg-efb-panel hover:bg-slate-800 border-efb-border text-slate-300'
-                  }">
-                    <span class="text-[10px] uppercase text-slate-400">${pt}</span>
-                    <strong class="text-xs mt-0.5">${oooi[pt] || 'Marcar'}</strong>
-                  </button>
-                `
-                )
+                .map(k => {
+                  const val = leg.oooi[k];
+                  return `
+                    <button onclick="recordOOOI('${k}')" class="min-h-[48px] px-3 py-2 rounded-xl border font-mono text-xs transition flex flex-col items-center justify-center ${
+                      val
+                        ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
+                        : 'bg-efb-panel hover:bg-slate-800 border-efb-border text-slate-300'
+                    }">
+                      <span class="text-[10px] uppercase tracking-wider opacity-75">${k}</span>
+                      <strong class="text-xs mt-0.5">${val || 'Marcar'}</strong>
+                    </button>
+                  `;
+                })
                 .join('')}
             </div>
           </div>
 
-          <div class="flex flex-wrap items-center justify-between gap-2.5 pt-2 border-t border-efb-border">
-            <div class="flex flex-wrap gap-2">
-              <a href="${sbUrl}" target="_blank" rel="noopener noreferrer" class="min-h-[44px] px-4 py-2.5 rounded-xl bg-sky-500/20 hover:bg-sky-500/30 border border-sky-500/40 text-sky-300 text-xs font-bold inline-flex items-center transition">
+          <!-- Action Bar -->
+          <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 pt-2 border-t border-efb-border">
+            <div class="flex gap-2">
+              <a href="${sbUrl}" target="_blank" rel="noopener" class="flex-1 sm:flex-initial min-h-[44px] px-4 py-2 rounded-xl bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/40 text-sky-300 text-xs font-bold transition flex items-center justify-center gap-1.5">
                 Despachar en SimBrief ↗
               </a>
-              <button onclick="cancelOrPauseMission()" class="min-h-[44px] px-4 py-2.5 rounded-xl bg-efb-bg hover:bg-slate-800 border border-efb-border text-xs font-semibold text-slate-300 transition">
+              <button onclick="pauseActiveMission()" class="min-h-[44px] px-3.5 py-2 rounded-xl bg-efb-bg hover:bg-slate-800 border border-efb-border text-xs font-semibold text-slate-300 transition">
                 Pausar / Dejar Aquí
               </button>
             </div>
-            <button onclick="completeCurrentLeg()" class="min-h-[44px] px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold shadow-lg shadow-emerald-500/20 transition">
-              ${idx + 1 < msn.legs.length ? `Completar Tramo ${idx + 1} y Seguir →` : `Aterrizado en ${leg.dest} • Finalizar Misión ✓`}
+            <button onclick="completeActiveLeg()" class="min-h-[46px] px-6 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs sm:text-sm font-bold shadow-lg shadow-emerald-500/20 transition">
+              ${isLastLeg ? '✓ Finalizar Misión y Estacionar' : `✓ Completar Tramo y Pasar al #${idx + 2} →`}
             </button>
           </div>
         </div>
       `;
     }
 
-    function renderFleetView() {
-      const southBtn = document.getElementById('map-zoom-south');
-      const americasBtn = document.getElementById('map-zoom-americas');
-      if (southBtn && americasBtn) {
-        southBtn.className = `px-3 py-1 rounded-lg text-xs font-semibold transition ${
+    // =========================================================================
+    // 8. FLEET, NO-TELEPORT LOCK, PHASE INSPECTION & TACTICAL MAP
+    // =========================================================================
+    function switchAircraft(targetReg) {
+      if (state.activeReg === targetReg) return;
+      if (state.activeMission) {
+        showToast('No podés cambiar de aeronave con un vuelo activo en curso.', 'error');
+        return;
+      }
+      if (state.pilotLocation !== 'SADF' || state.fleet[targetReg].location !== 'SADF') {
+        showToast(`Cambio bloqueado: debés regresar a San Fernando (SADF) para cambiar de aeronave. Ubicación actual: ${state.pilotLocation}.`, 'error');
+        return;
+      }
+      state.activeReg = targetReg;
+      saveState();
+      renderAll();
+      generateDispatches();
+      showToast(`Aeronave activa cambiada a ${targetReg}.`, 'success');
+    }
+
+    function performPhaseInspection(reg) {
+      const ac = state.fleet[reg];
+      if (!ac || ac.location !== 'SADF') {
+        showToast('La inspección de fase solo se realiza en el hangar de San Fernando (SADF).', 'warn');
+        return;
+      }
+      ac.hoursUntilInspection = PHASE_INSPECTION_HOURS;
+      ac.inspectionsCompleted += 1;
+      saveState();
+      renderAll();
+      generateDispatches();
+      showToast(`Inspección de fase completada en Hangar SADF para ${reg} (25.0 hs disponibles).`, 'success');
+    }
+
+    function setMapZoom(mode) {
+      state.mapZoom = mode;
+      saveState();
+      renderTacticalMap();
+    }
+
+    function renderTacticalMap() {
+      const container = document.getElementById('fleet-map-container');
+      const btnSouth = document.getElementById('map-zoom-south');
+      const btnAmer = document.getElementById('map-zoom-americas');
+      if (btnSouth && btnAmer) {
+        btnSouth.className = `px-3 py-1 rounded-lg text-xs font-semibold transition ${
           state.mapZoom === 'south' ? 'bg-orange-500 text-white' : 'text-slate-400 hover:text-white'
         }`;
-        americasBtn.className = `px-3 py-1 rounded-lg text-xs font-semibold transition ${
+        btnAmer.className = `px-3 py-1 rounded-lg text-xs font-semibold transition ${
           state.mapZoom === 'americas' ? 'bg-orange-500 text-white' : 'text-slate-400 hover:text-white'
         }`;
       }
 
       const bounds =
         state.mapZoom === 'americas'
-          ? { minLat: -56, maxLat: 30, minLon: -85, maxLon: -40 }
+          ? { minLat: -56, maxLat: 30, minLon: -84, maxLon: -40 }
           : { minLat: -56, maxLat: -16, minLon: -76, maxLon: -42 };
 
+      const w = 800;
+      const h = 340;
       const project = (lat, lon) => {
-        const x = ((lon - bounds.minLon) / (bounds.maxLon - bounds.minLon)) * 760 + 20;
-        const y = ((bounds.maxLat - lat) / (bounds.maxLat - bounds.minLat)) * 320 + 20;
-        return { x: Math.max(15, Math.min(785, x)), y: Math.max(15, Math.min(345, y)) };
+        const x = ((lon - bounds.minLon) / (bounds.maxLon - bounds.minLon)) * (w - 80) + 40;
+        const y = h - (((lat - bounds.minLat) / (bounds.maxLat - bounds.minLat)) * (h - 60) + 30);
+        return { x: Math.round(x), y: Math.round(y) };
       };
 
-      const dotsSvg = Object.values(AIRPORTS)
-        .filter(ap => isSceneryEnabled(ap.icao))
+      const dotsHtml = Object.values(AIRPORTS)
+        .filter(ap => ap.lat >= bounds.minLat && ap.lat <= bounds.maxLat && ap.lon >= bounds.minLon && ap.lon <= bounds.maxLon)
         .map(ap => {
-          const p = project(ap.lat, ap.lon);
+          const pt = project(ap.lat, ap.lon);
           const isBase = ap.icao === 'SADF';
-          return `
-            <circle cx="${p.x}" cy="${p.y}" r="${isBase ? 4.5 : 2.5}" fill="${isBase ? '#f97316' : '#334155'}" />
-            ${isBase ? `<text x="${p.x + 7}" y="${p.y + 3}" fill="#fdba74" font-size="10" font-family="JetBrains Mono" font-weight="bold">SADF</text>` : ''}
-          `;
-        })
-        .join('');
-
-      let routeLineSvg = '';
-      if (state.activeMission) {
-        const pts = [state.activeMission.legs[0].orig, ...state.activeMission.legs.map(l => l.dest)]
-          .map(code => project(AIRPORTS[code].lat, AIRPORTS[code].lon))
-          .map(p => `${p.x},${p.y}`)
-          .join(' ');
-        routeLineSvg = `<polyline points="${pts}" fill="none" stroke="#f97316" stroke-width="2" stroke-dasharray="5,4" />`;
-      }
-
-      const aircraftMarkers = ['LV-BPA', 'LV-IYQ']
-        .map((reg, i) => {
-          const ac = state.fleet[reg];
-          const ap = AIRPORTS[ac.location] || AIRPORTS.SADF;
-          const p = project(ap.lat, ap.lon);
-          const offsetY = i === 0 ? -8 : 12;
-          const color = reg === 'LV-BPA' ? '#fb923c' : '#38bdf8';
+          const enabled = state.enabledSceneries[ap.icao];
           return `
             <g>
-              <circle cx="${p.x}" cy="${p.y}" r="6" fill="${color}" fill-opacity="0.25" stroke="${color}" stroke-width="1.5" />
-              <text x="${p.x + 8}" y="${p.y + offsetY}" fill="${color}" font-size="10" font-family="JetBrains Mono" font-weight="bold">${reg} (${ac.location})</text>
+              <circle cx="${pt.x}" cy="${pt.y}" r="${isBase ? 5 : 2.5}" fill="${
+            isBase ? '#f97316' : enabled ? '#38bdf8' : '#334155'
+          }" opacity="${enabled ? 0.9 : 0.4}" />
+              ${
+                isBase || ['SAZS', 'SCEL', 'SBGR', 'SPJC', 'SKBO', 'KOPF', 'SULS', 'SASA'].includes(ap.icao)
+                  ? `<text x="${pt.x + 7}" y="${pt.y + 3}" fill="#94a3b8" font-size="10" font-family="monospace">${ap.icao}</text>`
+                  : ''
+              }
             </g>
           `;
         })
         .join('');
 
-      document.getElementById('fleet-map-container').innerHTML = `
-        <svg viewBox="0 0 800 360" class="w-full h-56 sm:h-72 block">
-          <g stroke="#141d2e" stroke-width="1">
-            <line x1="0" y1="90" x2="800" y2="90" /><line x1="0" y1="180" x2="800" y2="180" /><line x1="0" y1="270" x2="800" y2="270" />
-            <line x1="200" y1="0" x2="200" y2="360" /><line x1="400" y1="0" x2="400" y2="360" /><line x1="600" y1="0" x2="600" y2="360" />
+      let routeLineHtml = '';
+      if (state.activeMission) {
+        const pts = [state.activeMission.legs[0].from, ...state.activeMission.legs.map(l => l.to)]
+          .map(c => project(AIRPORTS[c].lat, AIRPORTS[c].lon))
+          .map(p => `${p.x},${p.y}`)
+          .join(' ');
+        routeLineHtml = `<polyline points="${pts}" fill="none" stroke="#f97316" stroke-width="2" stroke-dasharray="5,5" />`;
+      }
+
+      const bpaPt = project(AIRPORTS[state.fleet['LV-BPA'].location].lat, AIRPORTS[state.fleet['LV-BPA'].location].lon);
+      const iyqPt = project(AIRPORTS[state.fleet['LV-IYQ'].location].lat, AIRPORTS[state.fleet['LV-IYQ'].location].lon);
+
+      container.innerHTML = `
+        <svg viewBox="0 0 ${w} ${h}" class="w-full h-auto block">
+          <defs>
+            <pattern id="efbGrid" width="40" height="40" patternUnits="userSpaceOnUse">
+              <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#151e2e" stroke-width="1" />
+            </pattern>
+          </defs>
+          <rect width="${w}" height="${h}" fill="url(#efbGrid)" />
+          ${dotsHtml}
+          ${routeLineHtml}
+          <g transform="translate(${bpaPt.x}, ${bpaPt.y})">
+            <circle r="7" fill="#f97316" fill-opacity="0.25" />
+            <circle r="4" fill="#f97316" />
+            <text x="9" y="-6" fill="#fdba74" font-size="11" font-weight="bold" font-family="monospace">LV-BPA (${state.fleet['LV-BPA'].location})</text>
           </g>
-          ${dotsSvg}
-          ${routeLineSvg}
-          ${aircraftMarkers}
+          <g transform="translate(${iyqPt.x}, ${iyqPt.y})">
+            <circle r="7" fill="#f43f5e" fill-opacity="0.25" />
+            <circle r="4" fill="#f43f5e" />
+            <text x="9" y="13" fill="#fda4af" font-size="11" font-weight="bold" font-family="monospace">LV-IYQ (${state.fleet['LV-IYQ'].location})</text>
+          </g>
         </svg>
       `;
+    }
 
-      document.getElementById('fleet-cards-container').innerHTML = ['LV-BPA', 'LV-IYQ']
+    function renderFleet() {
+      renderTacticalMap();
+      const container = document.getElementById('fleet-cards-container');
+      const canSwitch = state.pilotLocation === 'SADF' && !state.activeMission;
+
+      container.innerHTML = ['LV-BPA', 'LV-IYQ']
         .map(reg => {
           const ac = state.fleet[reg];
           const isSelected = state.activeReg === reg;
-          const atBase = ac.location === 'SADF';
-          const canSwitch = !isSelected && state.pilotLocation === 'SADF' && atBase && !state.activeMission;
-          const inspPct = Math.max(0, Math.min(100, (ac.hoursUntilInspection / PHASE_INSPECTION_HOURS) * 100));
+          const pct = Math.max(0, Math.min(100, (ac.hoursUntilInspection / PHASE_INSPECTION_HOURS) * 100));
+          const inBase = ac.location === 'SADF';
 
           return `
-            <div class="bg-efb-panel border ${isSelected ? 'border-orange-500/60' : 'border-efb-border'} rounded-2xl p-5 space-y-4">
+            <div class="bg-efb-panel border ${isSelected ? 'border-orange-500/60' : 'border-efb-border'} rounded-2xl p-4 sm:p-5 space-y-4">
               <div class="flex items-start justify-between gap-2">
                 <div>
                   <div class="flex items-center gap-2">
-                    <h3 class="font-mono text-lg font-bold text-white">${reg}</h3>
+                    <h3 class="text-lg font-mono font-bold text-white">${ac.reg}</h3>
                     <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-efb-bg border border-efb-border text-slate-300">${ac.type}</span>
-                    ${isSelected ? '<span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-orange-500/15 text-orange-300 border border-orange-500/35">ACTIVO</span>' : ''}
+                    ${isSelected ? '<span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-orange-500/20 text-orange-300 border border-orange-500/40">ACTIVO</span>' : ''}
                   </div>
                   <p class="text-xs text-slate-400 mt-1">${ac.role}</p>
                 </div>
                 <div class="text-right font-mono">
-                  <span class="text-xs text-slate-500 block">UBICACIÓN</span>
+                  <span class="text-[10px] text-slate-400 block">UBICACIÓN</span>
                   <strong class="text-sm text-white">${ac.location}</strong>
-                  <span class="text-[10px] text-slate-400 block">${AIRPORTS[ac.location]?.city || ''}</span>
                 </div>
               </div>
 
               <div class="grid grid-cols-3 gap-2 bg-efb-bg border border-efb-border rounded-xl p-3 font-mono text-xs">
-                <div><span class="text-[10px] text-slate-500 block">HORAS TOTAL</span><strong class="text-white">${ac.totalHours.toFixed(1)} h</strong></div>
-                <div><span class="text-[10px] text-slate-500 block">FUERA BASE</span><strong class="text-slate-200">${ac.legsAway}T / ${ac.hoursAway.toFixed(1)}h</strong></div>
-                <div><span class="text-[10px] text-slate-500 block">INSPECCIÓN</span><strong class="${ac.hoursUntilInspection <= 4.5 ? 'text-rose-400' : 'text-emerald-400'}">${ac.hoursUntilInspection.toFixed(1)} h</strong></div>
+                <div>
+                  <span class="text-[10px] text-slate-400 block">HORAS TOTAL</span>
+                  <strong class="text-white">${ac.totalHours.toFixed(1)} hs</strong>
+                </div>
+                <div>
+                  <span class="text-[10px] text-slate-400 block">FUERA BASE</span>
+                  <strong class="text-slate-200">${ac.legsAway} tr / ${ac.hoursAway.toFixed(1)}h</strong>
+                </div>
+                <div>
+                  <span class="text-[10px] text-slate-400 block">PRÓX. INSP</span>
+                  <strong class="${ac.hoursUntilInspection <= 4.5 ? 'text-amber-400' : 'text-emerald-400'}">${ac.hoursUntilInspection.toFixed(1)} hs</strong>
+                </div>
               </div>
 
-              <div class="space-y-1">
+              <div class="space-y-1.5">
                 <div class="flex justify-between text-[11px] font-mono text-slate-400">
-                  <span>Remanente Inspección de Fase (Hangar SADF)</span>
-                  <span>${ac.hoursUntilInspection.toFixed(1)} / ${PHASE_INSPECTION_HOURS}h</span>
+                  <span>Remanente Inspección de Fase (25h)</span>
+                  <span>${pct.toFixed(0)}%</span>
                 </div>
                 <div class="w-full h-2 bg-efb-bg rounded-full overflow-hidden border border-efb-border">
-                  <div class="h-full ${ac.hoursUntilInspection <= 4.5 ? 'bg-rose-500' : 'bg-emerald-500'}" style="width: ${inspPct}%"></div>
+                  <div class="h-full ${ac.hoursUntilInspection <= 4.5 ? 'bg-amber-500' : 'bg-emerald-500'} transition-all" style="width: ${pct}%"></div>
                 </div>
               </div>
 
-              <div class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-efb-border">
-                ${
-                  atBase
-                    ? `<button onclick="performHangarInspection('${reg}')" class="min-h-[40px] px-3.5 py-2 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/35 text-emerald-300 text-xs font-semibold transition">
-                        Hangar SADF: Resetear Inspección
-                      </button>`
-                    : `<span class="text-[11px] font-mono text-slate-500">Hangar disponible solo en SADF</span>`
-                }
+              <div class="flex flex-wrap gap-2 pt-2 border-t border-efb-border">
+                <button onclick="performPhaseInspection('${reg}')" ${!inBase ? 'disabled' : ''} class="min-h-[40px] px-3.5 py-2 rounded-xl bg-efb-bg hover:bg-slate-800 disabled:opacity-40 disabled:pointer-events-none border border-efb-border text-xs font-semibold text-emerald-300 transition">
+                  🔧 Hangar SADF: Reset Inspección
+                </button>
                 ${
                   isSelected
-                    ? `<span class="text-xs font-mono text-orange-400 font-semibold">En servicio</span>`
-                    : canSwitch
-                    ? `<button onclick="selectAircraft('${reg}')" class="min-h-[40px] px-4 py-2 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold transition">Cambiar a ${reg}</button>`
-                    : `<span class="text-[11px] font-mono text-slate-500">🔒 Bloqueado (Debés estar en SADF)</span>`
+                    ? `<span class="ml-auto min-h-[40px] px-3.5 py-2 rounded-xl bg-orange-500/10 border border-orange-500/30 text-xs font-semibold text-orange-300 flex items-center">Aeronave en Servicio</span>`
+                    : `<button onclick="switchAircraft('${reg}')" ${!canSwitch ? 'disabled' : ''} class="ml-auto min-h-[40px] px-4 py-2 rounded-xl bg-orange-500 hover:bg-orange-600 disabled:opacity-40 disabled:pointer-events-none text-white text-xs font-bold transition">
+                        ${canSwitch ? `Seleccionar ${reg}` : `🔒 Volver a SADF para Cambiar`}
+                      </button>`
                 }
               </div>
             </div>
@@ -2400,29 +2394,72 @@
         .join('');
     }
 
+    // =========================================================================
+    // 9. SCENERY MANAGER (MSFS 2024)
+    // =========================================================================
+    function setSceneryFilter(region) {
+      state.sceneryFilter = region;
+      saveState();
+      renderSceneryList();
+    }
+
+    function toggleScenery(icao) {
+      if (icao === 'SADF') {
+        showToast('SADF es tu base principal y permanece siempre activa.', 'warn');
+        return;
+      }
+      state.enabledSceneries[icao] = !state.enabledSceneries[icao];
+      saveState();
+      renderSceneryList();
+      updateSceneryBadge();
+      generateDispatches();
+    }
+
+    function bulkToggleSceneries(mode) {
+      Object.values(AIRPORTS).forEach(ap => {
+        if (ap.icao === 'SADF') {
+          state.enabledSceneries[ap.icao] = true;
+        } else if (mode === 'all_on') {
+          state.enabledSceneries[ap.icao] = true;
+        } else if (mode === 'regional_only') {
+          state.enabledSceneries[ap.icao] = ap.country === 'ARG' || ap.country === 'URY' || ap.country === 'CHL';
+        }
+      });
+      saveState();
+      renderSceneryList();
+      updateSceneryBadge();
+      generateDispatches();
+      showToast('Listado de escenarios actualizado.', 'success');
+    }
+
+    function updateSceneryBadge() {
+      const total = Object.keys(AIRPORTS).length;
+      const active = Object.values(state.enabledSceneries).filter(Boolean).length;
+      const badge = document.getElementById('scenery-badge');
+      if (badge) badge.textContent = `${active}/${total}`;
+    }
+
     function renderSceneryList() {
+      const pillsEl = document.getElementById('scenery-filter-pills');
       const filters = [
         { id: 'all', label: 'Todos (46)' },
         { id: 'argentina', label: 'Argentina' },
         { id: 'neighbor', label: 'Limítrofes' },
         { id: 'usa_corridor', label: 'Corredor EE.UU.' }
       ];
-
-      document.getElementById('scenery-filter-pills').innerHTML = filters
+      pillsEl.innerHTML = filters
         .map(
           f => `
-          <button onclick="setSceneryFilter('${f.id}')" class="min-h-[36px] px-3 py-1.5 rounded-xl text-xs font-semibold border transition ${
+          <button onclick="setSceneryFilter('${f.id}')" class="min-h-[36px] px-3 py-1 rounded-xl text-xs font-semibold border transition ${
             state.sceneryFilter === f.id
               ? 'bg-orange-500 text-white border-orange-500'
-              : 'bg-efb-bg text-slate-300 border-efb-border hover:bg-slate-800'
-          }">
-            ${f.label}
-          </button>
+              : 'bg-efb-bg text-slate-300 border-efb-border hover:border-slate-600'
+          }">${f.label}</button>
         `
         )
         .join('');
 
-      const q = (document.getElementById('scenery-search')?.value || '').trim().toLowerCase();
+      const q = (document.getElementById('scenery-search').value || '').trim().toLowerCase();
       const list = Object.values(AIRPORTS).filter(ap => {
         if (state.sceneryFilter !== 'all' && ap.region !== state.sceneryFilter) return false;
         if (q) {
@@ -2432,35 +2469,34 @@
         return true;
       });
 
-      document.getElementById('scenery-list-container').innerHTML = list
+      const container = document.getElementById('scenery-list-container');
+      container.innerHTML = list
         .map(ap => {
-          const enabled = isSceneryEnabled(ap.icao);
+          const isOn = Boolean(state.enabledSceneries[ap.icao]);
           const isBase = ap.icao === 'SADF';
           return `
-            <div class="bg-efb-panel border ${enabled ? 'border-efb-border' : 'border-efb-border/50 opacity-60'} rounded-2xl p-4 flex flex-col justify-between gap-3 transition">
+            <div class="bg-efb-panel border ${isOn ? 'border-efb-border' : 'border-efb-border/50 opacity-60'} rounded-2xl p-3.5 flex flex-col justify-between gap-3">
               <div class="flex items-start justify-between gap-2">
                 <div>
-                  <div class="flex items-center gap-1.5">
-                    <span class="font-mono text-sm font-bold text-white">${ap.icao}</span>
-                    <span class="font-mono text-[10px] px-1.5 py-0.5 rounded bg-efb-bg border border-efb-border text-slate-400">${ap.country}</span>
-                    <span class="font-mono text-[10px] px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-300 border border-sky-500/25">${ap.sim}</span>
+                  <div class="flex items-center gap-1.5 font-mono">
+                    <strong class="text-sm text-white">${ap.icao}</strong>
+                    <span class="text-[10px] text-slate-400">(${ap.iata}) • ${ap.country}</span>
+                    ${isBase ? '<span class="text-[9px] px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-300 border border-orange-500/35">BASE</span>' : ''}
                   </div>
-                  <p class="text-xs font-semibold text-slate-200 mt-1">${ap.city} — ${ap.name}</p>
-                  <p class="text-[11px] text-slate-400 mt-0.5">Dev: ${ap.dev} • Rwy ${ap.rwyFt} ft</p>
+                  <p class="text-xs font-semibold text-slate-200 mt-0.5">${ap.city} — ${ap.name}</p>
+                  <p class="text-[11px] text-slate-400 mt-0.5">${ap.dev} • <span class="text-emerald-400 font-mono">${ap.sim}</span></p>
                 </div>
-                <button onclick="toggleScenery('${ap.icao}')" ${isBase ? 'disabled' : ''} class="min-w-[52px] min-h-[32px] px-2.5 py-1 rounded-xl font-mono text-[11px] font-bold border transition ${
-                  isBase
-                    ? 'bg-orange-500/20 border-orange-500/40 text-orange-300 cursor-default'
-                    : enabled
-                    ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300'
-                    : 'bg-efb-bg border-efb-border text-slate-500'
+                <button onclick="toggleScenery('${ap.icao}')" class="min-w-[48px] min-h-[30px] px-2.5 py-1 rounded-lg font-mono text-[11px] font-bold border transition ${
+                  isOn
+                    ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40'
+                    : 'bg-efb-bg text-slate-500 border-efb-border'
                 }">
-                  ${isBase ? 'BASE' : enabled ? 'ON' : 'OFF'}
+                  ${isOn ? 'ON' : 'OFF'}
                 </button>
               </div>
-              <div class="flex items-center justify-between text-[11px] font-mono pt-2 border-t border-efb-border/60">
-                <span class="text-slate-500">Elev: ${ap.elev} ft</span>
-                <a href="${ap.url}" target="_blank" rel="noopener noreferrer" class="text-sky-400 hover:text-sky-300 underline">Ver Escenario ↗</a>
+              <div class="flex items-center justify-between text-[10px] font-mono text-slate-400 pt-2 border-t border-efb-border/70">
+                <span>Elev ${ap.elev} ft • Rwy ${ap.rwyFt} ft</span>
+                <a href="${ap.url}" target="_blank" rel="noopener" class="text-sky-400 hover:underline">SceneryAddons ↗</a>
               </div>
             </div>
           `;
@@ -2468,37 +2504,42 @@
         .join('');
     }
 
+    // =========================================================================
+    // 10. LOGBOOK
+    // =========================================================================
     function renderLogbook() {
-      const totalFlights = state.logbook.length;
-      const totalHours = state.logbook.reduce((acc, item) => acc + (item.flownHours || 0), 0);
-      const medevacCount = state.logbook.filter(i => i.legType === 'MEDEVAC').length;
-      const ferryCount = state.logbook.filter(i => i.legType === 'FERRY' || i.legType === 'RETORNO A BASE').length;
+      const badge = document.getElementById('logbook-badge');
+      if (badge) badge.textContent = String(state.logbook.length);
+
+      const totalHours = state.logbook.reduce((acc, e) => acc + (e.hours || 0), 0);
+      const medevacCount = state.logbook.filter(e => e.role === 'MEDEVAC').length;
+      const ferryCount = state.logbook.filter(e => e.role === 'FERRY' || e.role === 'RETORNO A BASE').length;
 
       document.getElementById('logbook-summary-container').innerHTML = `
-        <div class="bg-efb-panel border border-efb-border rounded-2xl p-4 font-mono">
-          <span class="text-[10px] text-slate-500 block">TRAMOS VOLADOS</span>
-          <strong class="text-xl text-white mt-1 block">${totalFlights}</strong>
+        <div class="bg-efb-panel border border-efb-border rounded-2xl p-3.5 font-mono">
+          <span class="text-[10px] text-slate-400 block">TRAMOS VOLADOS</span>
+          <strong class="text-lg text-white">${state.logbook.length}</strong>
         </div>
-        <div class="bg-efb-panel border border-efb-border rounded-2xl p-4 font-mono">
-          <span class="text-[10px] text-slate-500 block">HORAS TOTALES</span>
-          <strong class="text-xl text-orange-400 mt-1 block">${totalHours.toFixed(1)} h</strong>
+        <div class="bg-efb-panel border border-efb-border rounded-2xl p-3.5 font-mono">
+          <span class="text-[10px] text-slate-400 block">HORAS TOTALES</span>
+          <strong class="text-lg text-orange-400">${totalHours.toFixed(1)} hs</strong>
         </div>
-        <div class="bg-efb-panel border border-efb-border rounded-2xl p-4 font-mono">
-          <span class="text-[10px] text-slate-500 block">SANITARIOS (IYQ)</span>
-          <strong class="text-xl text-rose-400 mt-1 block">${medevacCount}</strong>
+        <div class="bg-efb-panel border border-efb-border rounded-2xl p-3.5 font-mono">
+          <span class="text-[10px] text-slate-400 block">SANITARIOS</span>
+          <strong class="text-lg text-rose-400">${medevacCount}</strong>
         </div>
-        <div class="bg-efb-panel border border-efb-border rounded-2xl p-4 font-mono">
-          <span class="text-[10px] text-slate-500 block">VUELOS FERRY</span>
-          <strong class="text-xl text-slate-300 mt-1 block">${ferryCount}</strong>
+        <div class="bg-efb-panel border border-efb-border rounded-2xl p-3.5 font-mono">
+          <span class="text-[10px] text-slate-400 block">FERRY / BASE</span>
+          <strong class="text-lg text-sky-400">${ferryCount}</strong>
         </div>
       `;
 
       const listEl = document.getElementById('logbook-list-container');
-      if (!totalFlights) {
+      if (state.logbook.length === 0) {
         listEl.innerHTML = `
           <div class="bg-efb-panel border border-efb-border rounded-2xl p-8 text-center">
-            <p class="text-sm font-bold text-white">Tu bitácora todavía está vacía</p>
-            <p class="text-xs text-slate-400 mt-1">Completá tramos desde la pestaña <strong>Vuelo</strong> para registrar tus horas y aterrizajes.</p>
+            <p class="text-sm font-bold text-white">Tu bitácora está vacía</p>
+            <p class="text-xs text-slate-400 mt-1">Completá tu primer tramo desde San Fernando (SADF) para registrar horas y tiempos OOOI.</p>
           </div>
         `;
         return;
@@ -2506,22 +2547,24 @@
 
       listEl.innerHTML = state.logbook
         .map(entry => {
-          const o = entry.oooi || {};
-          const oooiText = o.out || o.off || o.on || o.in ? `OUT ${o.out || '--'} • OFF ${o.off || '--'} • ON ${o.on || '--'} • IN ${o.in || '--'}` : 'Sin marcas OOOI';
+          const oooiStr =
+            entry.oooi && (entry.oooi.out || entry.oooi.off || entry.oooi.on || entry.oooi.in)
+              ? `OUT ${entry.oooi.out || '--'} • OFF ${entry.oooi.off || '--'} • ON ${entry.oooi.on || '--'} • IN ${entry.oooi.in || '--'}`
+              : 'OOOI no registrado';
           return `
-            <div class="bg-efb-panel border border-efb-border rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 font-mono text-xs">
+            <div class="bg-efb-panel border border-efb-border rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div class="space-y-1">
-                <div class="flex items-center gap-2 flex-wrap">
+                <div class="flex flex-wrap items-center gap-2 font-mono text-xs">
                   <span class="text-slate-400">${entry.date}</span>
-                  <span class="font-bold text-orange-400">${entry.reg}</span>
-                  <span class="text-[10px] px-1.5 py-0.5 rounded border ${getBadgeStyle(entry.legType)}">${entry.legType}</span>
+                  <strong class="text-orange-400">${entry.reg}</strong>
+                  <strong class="text-white">${entry.from} ➔ ${entry.to}</strong>
+                  <span class="text-[10px] px-1.5 py-0.5 rounded border ${getBadgeStyle(entry.role)}">${entry.role}</span>
                 </div>
-                <div class="text-sm font-bold text-white">${entry.orig} (${AIRPORTS[entry.orig]?.city || ''}) ➔ ${entry.dest} (${AIRPORTS[entry.dest]?.city || ''})</div>
-                <div class="text-[10px] text-slate-400">${oooiText}</div>
+                <p class="text-[11px] font-mono text-slate-400">${oooiStr}</p>
               </div>
-              <div class="text-left sm:text-right space-y-0.5 shrink-0">
-                <span class="text-emerald-400 font-bold block">${formatMin(entry.eet)} (${entry.flownHours.toFixed(2)}h)</span>
-                <span class="text-slate-400 block">${entry.dist} NM • ${entry.pax} PAX</span>
+              <div class="text-left sm:text-right font-mono text-xs">
+                <strong class="text-emerald-400 block">${Number(entry.hours).toFixed(2)} hs</strong>
+                <span class="text-[10px] text-slate-400">${entry.distNM} NM • ${entry.pax} PAX</span>
               </div>
             </div>
           `;
@@ -2529,27 +2572,9 @@
         .join('');
     }
 
-    function renderAll() {
-      renderHeaderAndStrip();
-      updateBadges();
-      updateBackupBadge();
-      renderDispatchList();
-      renderActiveFlight();
-      renderFleetView();
-      renderSceneryList();
-      renderLogbook();
-    }
-
     // =========================================================================
-    // 10. CONTROLS, TABS, MODALS, TOAST & CLOCK
+    // 11. NAVIGATION, MODALS, TOAST, CLOCK & BOOT INIT
     // =========================================================================
-    function syncControlsWithState() {
-      document.getElementById('time-slider').value = String(state.availableHours);
-      document.getElementById('toggle-longrange').checked = Boolean(state.longRangeMode);
-      document.getElementById('mission-pref').value = state.missionPref || 'auto';
-      updateTimeDisplay(state.availableHours, true);
-    }
-
     function setTab(tabName) {
       ['dispatch', 'active', 'fleet', 'scenery', 'logbook'].forEach(t => {
         const view = document.getElementById(`view-${t}`);
@@ -2565,6 +2590,10 @@
           }
         }
       });
+      if (tabName === 'fleet') renderFleet();
+      if (tabName === 'active') renderActiveFlight();
+      if (tabName === 'scenery') renderSceneryList();
+      if (tabName === 'logbook') renderLogbook();
     }
 
     function updateTimeDisplay(val, skipSave) {
@@ -2572,48 +2601,15 @@
       let label = `${state.availableHours.toFixed(2).replace(/\.00$/, '.0')} hs`;
       if (state.availableHours === 0.75) label = '45 min';
       else if (state.availableHours >= 12) label = `${state.availableHours.toFixed(1)} hs (Largo)`;
-      document.getElementById('time-display').textContent = label;
+      const disp = document.getElementById('time-display');
+      if (disp) disp.textContent = label;
       if (!skipSave) saveState();
     }
 
-    function setTimePreset(hours, enableLongRange) {
-      state.availableHours = hours;
-      state.longRangeMode = Boolean(enableLongRange);
-      syncControlsWithState();
-      saveState();
-      generateDispatches();
-    }
-
-    function toggleLongRange(checked) {
-      state.longRangeMode = Boolean(checked);
-      saveState();
-      generateDispatches();
-    }
-
-    function setMissionPref(pref) {
-      state.missionPref = pref;
-      saveState();
-      generateDispatches();
-    }
-
-    function copyText(txt) {
-      const ta = document.createElement('textarea');
-      ta.value = txt;
-      ta.style.position = 'fixed';
-      ta.style.opacity = '0';
-      document.body.appendChild(ta);
-      ta.select();
-      try {
-        document.execCommand('copy');
-        showToast('Copiado al portapapeles.', 'success');
-      } catch (e) {}
-      document.body.removeChild(ta);
-    }
-
-    function openConfirmModal(title, body, onConfirm) {
+    function openConfirmModal(title, body, onOk) {
       document.getElementById('confirm-modal-title').textContent = title;
       document.getElementById('confirm-modal-body').textContent = body;
-      modalConfirmCallback = onConfirm;
+      modalConfirmCallback = onOk;
       document.getElementById('confirm-modal').classList.remove('hidden');
     }
 
@@ -2636,11 +2632,31 @@
         warn: 'bg-amber-950/95 border-amber-500/50 text-amber-200',
         error: 'bg-rose-950/95 border-rose-500/50 text-rose-200'
       };
-      box.className = `fixed bottom-20 md:bottom-5 right-4 left-4 sm:left-auto z-50 max-w-sm px-4 py-3 rounded-xl border text-xs font-medium shadow-2xl ${styles[type] || styles.success}`;
+      box.className = `fixed bottom-20 md:bottom-5 right-4 left-4 sm:left-auto z-50 max-w-sm px-4 py-3 rounded-xl border text-xs font-medium shadow-2xl transition-all ${
+        styles[type] || styles.success
+      }`;
       box.textContent = msg;
       box.classList.remove('hidden');
       clearTimeout(toastTimer);
-      toastTimer = setTimeout(() => box.classList.add('hidden'), 3600);
+      toastTimer = setTimeout(() => {
+        box.classList.add('hidden');
+      }, 4200);
+    }
+
+    function copyText(text, label) {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      try {
+        document.execCommand('copy');
+        showToast(`${label || 'Texto'} copiado al portapapeles.`, 'success');
+      } catch (e) {
+        showToast('No se pudo copiar automáticamente.', 'warn');
+      }
+      document.body.removeChild(ta);
     }
 
     function updateUtcClock() {
@@ -2652,84 +2668,103 @@
       if (el) el.textContent = `${hh}:${mm}:${ss} Z`;
     }
 
-    // =========================================================================
-    // 11. INITIALIZATION
-    // =========================================================================
-    window.__efbApplyRemoteState = function (remoteData) {
+    function renderHeaderAndStrip() {
+      const ac = state.fleet[state.activeReg];
+      const canSwitch = state.pilotLocation === 'SADF' && !state.activeMission;
+
+      const switcher = document.getElementById('header-aircraft-switcher');
+      if (switcher) {
+        switcher.innerHTML = ['LV-BPA', 'LV-IYQ']
+          .map(reg => {
+            const active = state.activeReg === reg;
+            return `
+              <button onclick="switchAircraft('${reg}')" class="px-2.5 py-1 rounded-lg font-mono text-xs font-bold transition flex items-center gap-1 ${
+                active
+                  ? 'bg-orange-500 text-white shadow'
+                  : canSwitch
+                  ? 'text-slate-400 hover:text-white'
+                  : 'text-slate-500 cursor-not-allowed'
+              }">
+                <span>${reg}</span>
+                ${!active && !canSwitch ? '<span class="text-[10px]">🔒</span>' : ''}
+              </button>
+            `;
+          })
+          .join('');
+      }
+
+      document.getElementById('strip-location').textContent = state.pilotLocation;
+      document.getElementById('strip-aircraft').textContent = state.activeReg;
+      document.getElementById('strip-away').textContent =
+        state.pilotLocation === 'SADF' ? 'En Base' : `${ac.legsAway} tr / ${ac.hoursAway.toFixed(1)}h`;
+
+      const inspEl = document.getElementById('strip-inspection');
+      inspEl.textContent = `${ac.hoursUntilInspection.toFixed(1)}h`;
+      inspEl.className = ac.hoursUntilInspection <= 4.5 ? 'text-amber-400' : 'text-emerald-400';
+
+      const needReturn =
+        state.pilotLocation !== 'SADF' && (ac.legsAway >= 3 || ac.hoursAway >= 6.0 || ac.hoursUntilInspection <= 4.5);
+      const alertEl = document.getElementById('strip-return-alert');
+      alertEl.classList.toggle('hidden', !needReturn);
+      alertEl.classList.toggle('flex', needReturn);
+
+      const activeDot = document.getElementById('active-mission-dot');
+      if (activeDot) activeDot.classList.toggle('hidden', !state.activeMission);
+    }
+
+    function syncControlsFromState() {
+      const slider = document.getElementById('time-slider');
+      const lr = document.getElementById('toggle-longrange');
+      const pref = document.getElementById('mission-pref');
+      if (slider) slider.value = String(state.availableHours);
+      if (lr) lr.checked = Boolean(state.longRangeMode);
+      if (pref) pref.value = state.missionPref || 'auto';
+      updateTimeDisplay(state.availableHours, true);
+    }
+
+    function renderAll() {
+      renderHeaderAndStrip();
+      updateSceneryBadge();
+      updateBackupBadge();
+      renderDispatches();
+      renderActiveFlight();
+      renderFleet();
+      renderSceneryList();
+      renderLogbook();
+    }
+
+    window.__efbApplyRemoteState = function(remoteData) {
       const migrated = migrateState(remoteData);
       migrated.hasUnsavedBackupChanges = false;
       state = migrated;
       saveLocalState();
-      syncControlsWithState();
+      syncControlsFromState();
       renderAll();
       generateDispatches();
     };
 
-    window.addEventListener('DOMContentLoaded', () => {
-      loadLocalState();
-      const linkedViaHash = checkMagicSyncHash();
+    window.addEventListener('DOMContentLoaded', async () => {
       setupPwaAssets();
-      syncControlsWithState();
-      renderAll();
-      generateDispatches();
-      setTab(state.activeMission ? 'active' : 'dispatch');
+      loadLocalState();
+      syncControlsFromState();
+
       updateUtcClock();
       setInterval(updateUtcClock, 1000);
 
       const creds = getGistCreds();
-      if (creds.token) {
-        updateSyncIndicators(creds.gistId ? `GIST ${creds.gistId.slice(0, 6)}` : 'GITHUB OK', true);
-        pullFromGist(!linkedViaHash);
+      if (creds.token && creds.gistId) {
+        updateSyncIndicators(`GIST ${creds.gistId.slice(0, 6)}`, true);
+      }
+
+      setTab('dispatch');
+      renderAll();
+      generateDispatches();
+
+      const syncedFromHash = await checkMagicLinkOnBoot();
+      if (!syncedFromHash && creds.token && creds.gistId) {
+        pullFromGist(true);
       }
     });
-  </script>
-
-  <!-- ==================== OPTIONAL CANVAS CLOUD SYNC ==================== -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-    import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-    async function initCloudSync() {
-      if (typeof __firebase_config === 'undefined' || !__firebase_config) return;
-
-      try {
-        const firebaseConfig = JSON.parse(__firebase_config);
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'baires-fly-efb';
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-
-        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-          await signInWithCustomToken(auth, __initial_auth_token);
-        } else {
-          await signInAnonymously(auth);
-        }
-
-        const user = auth.currentUser;
-        if (!user) return;
-
-        const privateDocRef = doc(db, 'artifacts', appId, 'users', user.uid, 'efbState', 'current');
-        const snap = await getDoc(privateDocRef);
-        if (snap.exists() && snap.data() && snap.data().payload) {
-          window.__efbApplyRemoteState(snap.data().payload);
-        }
-
-        window.__efbSyncBridge = {
-          pushState: async latestState => {
-            try {
-              await setDoc(privateDocRef, {
-                schemaVersion: 4,
-                updatedAt: new Date().toISOString(),
-                payload: JSON.parse(JSON.stringify(latestState))
-              });
-            } catch (e) {}
-          }
-        };
-      } catch (err) {}
-    }
-
-    initCloudSync();
   </script>
 </body>
 </html>
