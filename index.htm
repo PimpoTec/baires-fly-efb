@@ -404,14 +404,18 @@
         </p>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
           <input id="gist-token-input" type="password" placeholder="ghp_xxxxxxxxxxxx (Token GitHub)" class="min-h-[40px] bg-efb-panel border border-efb-border rounded-xl px-3 py-1.5 text-xs font-mono text-white placeholder-slate-500 focus:outline-none focus:border-sky-500" />
-          <input id="gist-id-input" type="text" placeholder="Gist ID (opcional si es 1ra vez)" class="min-h-[40px] bg-efb-panel border border-efb-border rounded-xl px-3 py-1.5 text-xs font-mono text-white placeholder-slate-500 focus:outline-none focus:border-sky-500" />
+          <input id="gist-id-input" type="text" placeholder="Gist ID (opcional, se detecta solo)" class="min-h-[40px] bg-efb-panel border border-efb-border rounded-xl px-3 py-1.5 text-xs font-mono text-white placeholder-slate-500 focus:outline-none focus:border-sky-500" />
         </div>
+        <div id="gist-error-box" class="hidden bg-rose-950/70 border border-rose-500/40 rounded-xl p-2.5 text-[11px] text-rose-200 leading-relaxed"></div>
         <div class="flex flex-wrap gap-2">
           <button type="button" onclick="connectAndPushGist()" class="min-h-[38px] px-3.5 py-1.5 rounded-xl bg-sky-500/20 hover:bg-sky-500/30 border border-sky-500/40 text-sky-300 text-xs font-bold transition">
             Vincular y Subir a GitHub
           </button>
           <button type="button" onclick="pullFromGist(false)" class="min-h-[38px] px-3.5 py-1.5 rounded-xl bg-efb-panel hover:bg-slate-800 border border-efb-border text-slate-200 text-xs font-semibold transition">
             Traer Último Estado
+          </button>
+          <button type="button" onclick="copyMagicSyncLink()" class="min-h-[38px] px-3.5 py-1.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/35 text-emerald-300 text-xs font-semibold transition">
+            Copiar Link Mágico (iPad / Celu)
           </button>
         </div>
       </div>
@@ -845,18 +849,67 @@
     // =========================================================================
     // 4. GITHUB GIST AUTO-SYNC & PORTABLE BACKUP
     // =========================================================================
+    function sanitizeGitHubToken(raw) {
+      let t = String(raw || '').trim().replace(/\s+/g, '');
+      // Fix accidental double-paste of ghp_ / github_pat_ tokens
+      const ghpMatches = t.match(/ghp_[A-Za-z0-9]{36}/g);
+      if (ghpMatches && ghpMatches.length > 0) return ghpMatches[0];
+      const patMatches = t.match(/github_pat_[A-Za-z0-9_]{20,}/g);
+      if (patMatches && patMatches.length > 0) return patMatches[0];
+      return t;
+    }
+
+    function sanitizeGistId(raw) {
+      let s = String(raw || '').trim();
+      if (s.includes('/')) {
+        const parts = s.split('/').filter(Boolean);
+        s = parts[parts.length - 1] || '';
+      }
+      return s;
+    }
+
     function getGistCreds() {
       try {
         const raw = localStorage.getItem(GIST_CREDS_KEY);
-        if (raw) return JSON.parse(raw);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          return {
+            token: sanitizeGitHubToken(parsed.token),
+            gistId: sanitizeGistId(parsed.gistId)
+          };
+        }
       } catch (e) {}
       return { token: '', gistId: '' };
     }
 
     function saveGistCreds(token, gistId) {
       try {
-        localStorage.setItem(GIST_CREDS_KEY, JSON.stringify({ token: token.trim(), gistId: gistId.trim() }));
+        localStorage.setItem(
+          GIST_CREDS_KEY,
+          JSON.stringify({
+            token: sanitizeGitHubToken(token),
+            gistId: sanitizeGistId(gistId)
+          })
+        );
       } catch (e) {}
+    }
+
+    async function findExistingBairesFlyGist(token) {
+      try {
+        const res = await fetch('https://api.github.com/gists?per_page=30', {
+          headers: {
+            Authorization: `token ${token}`,
+            Accept: 'application/vnd.github+json'
+          }
+        });
+        if (!res.ok) return '';
+        const list = await res.json();
+        if (Array.isArray(list)) {
+          const found = list.find(g => g.files && g.files['baires_fly_efb_state.json']);
+          if (found && found.id) return found.id;
+        }
+      } catch (e) {}
+      return '';
     }
 
     function updateSyncIndicators(label, isConnected) {
@@ -883,6 +936,11 @@
       const creds = getGistCreds();
       if (!creds.token) return;
 
+      let targetGistId = creds.gistId;
+      if (!targetGistId) {
+        targetGistId = await findExistingBairesFlyGist(creds.token);
+      }
+
       const payload = buildBackupPayload();
       const body = {
         description: 'Baires Fly Pilot EFB — Fleet & Logbook Sync',
@@ -895,11 +953,11 @@
 
       try {
         let res;
-        if (creds.gistId) {
-          res = await fetch(`https://api.github.com/gists/${creds.gistId}`, {
+        if (targetGistId) {
+          res = await fetch(`https://api.github.com/gists/${targetGistId}`, {
             method: 'PATCH',
             headers: {
-              Authorization: `Bearer ${creds.token}`,
+              Authorization: `token ${creds.token}`,
               Accept: 'application/vnd.github+json',
               'Content-Type': 'application/json'
             },
@@ -910,7 +968,7 @@
           res = await fetch('https://api.github.com/gists', {
             method: 'POST',
             headers: {
-              Authorization: `Bearer ${creds.token}`,
+              Authorization: `token ${creds.token}`,
               Accept: 'application/vnd.github+json',
               'Content-Type': 'application/json'
             },
@@ -918,7 +976,15 @@
           });
         }
 
-        if (!res.ok) throw new Error('GitHub API error ' + res.status);
+        if (!res.ok) {
+          let detail = `HTTP ${res.status}`;
+          try {
+            const errJson = await res.json();
+            if (errJson && errJson.message) detail = `${res.status}: ${errJson.message}`;
+          } catch (e) {}
+          throw new Error(detail);
+        }
+
         const data = await res.json();
         if (data && data.id) {
           saveGistCreds(creds.token, data.id);
@@ -929,10 +995,13 @@
           saveLocalState();
           updateBackupBadge();
           updateSyncIndicators(`GIST ${data.id.slice(0, 6)}`, true);
-          if (!silent) showToast(`Sincronizado con GitHub Gist (${data.id.slice(0, 8)}...).`, 'success');
+          if (!silent) showToast(`¡Conectado! Sincronizado con GitHub (${data.id.slice(0, 8)}...).`, 'success');
         }
       } catch (err) {
-        if (!silent) showToast('Error conectando con GitHub. Verificá tu Token con permiso "gist".', 'error');
+        if (!silent) {
+          const msg = err && err.message ? err.message : 'Error de red';
+          showToast(`Error GitHub (${msg}). Verificá que estés en tu web de GitHub Pages y no en Preview.`, 'error');
+        }
       }
     }
 
@@ -947,19 +1016,34 @@
 
     async function pullFromGist(silent) {
       const creds = getGistCreds();
-      if (!creds.token || !creds.gistId) {
-        if (!silent) showToast('Ingresá tu Token y Gist ID para descargar el estado.', 'warn');
+      if (!creds.token) {
+        if (!silent) showToast('Ingresá tu Token de GitHub para descargar el estado.', 'warn');
+        return;
+      }
+
+      let targetGistId = creds.gistId;
+      if (!targetGistId) {
+        targetGistId = await findExistingBairesFlyGist(creds.token);
+        if (targetGistId) {
+          saveGistCreds(creds.token, targetGistId);
+          const idInput = document.getElementById('gist-id-input');
+          if (idInput) idInput.value = targetGistId;
+        }
+      }
+
+      if (!targetGistId) {
+        if (!silent) showToast('No se encontró un respaldo previo. Tocá "Vincular y Subir a GitHub".', 'warn');
         return;
       }
 
       try {
-        const res = await fetch(`https://api.github.com/gists/${creds.gistId}`, {
+        const res = await fetch(`https://api.github.com/gists/${targetGistId}`, {
           headers: {
-            Authorization: `Bearer ${creds.token}`,
+            Authorization: `token ${creds.token}`,
             Accept: 'application/vnd.github+json'
           }
         });
-        if (!res.ok) throw new Error('GitHub pull failed');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         const fileObj = data.files && data.files['baires_fly_efb_state.json'];
         if (fileObj && fileObj.content) {
@@ -977,22 +1061,58 @@
             generateDispatches();
             if (!silent) showToast(`Estado descargado desde GitHub (${state.logbook.length} vuelos).`, 'success');
           }
-          updateSyncIndicators(`GIST ${creds.gistId.slice(0, 6)}`, true);
+          updateSyncIndicators(`GIST ${targetGistId.slice(0, 6)}`, true);
         }
       } catch (err) {
-        if (!silent) showToast('No se pudo descargar desde GitHub Gist.', 'error');
+        if (!silent) showToast(`No se pudo descargar desde GitHub (${err.message || 'Error'}).`, 'error');
       }
     }
 
     async function connectAndPushGist() {
-      const tokenVal = (document.getElementById('gist-token-input')?.value || '').trim();
-      const idVal = (document.getElementById('gist-id-input')?.value || '').trim();
-      if (!tokenVal) {
+      const rawToken = document.getElementById('gist-token-input')?.value || '';
+      const rawId = document.getElementById('gist-id-input')?.value || '';
+      const cleanToken = sanitizeGitHubToken(rawToken);
+      const cleanId = sanitizeGistId(rawId);
+
+      if (!cleanToken) {
         showToast('Pegá primero tu GitHub Personal Access Token.', 'warn');
         return;
       }
-      saveGistCreds(tokenVal, idVal);
+      const tokEl = document.getElementById('gist-token-input');
+      const idEl = document.getElementById('gist-id-input');
+      if (tokEl) tokEl.value = cleanToken;
+      if (idEl) idEl.value = cleanId;
+
+      saveGistCreds(cleanToken, cleanId);
       await pushToGist(false);
+    }
+
+    function copyMagicSyncLink() {
+      const creds = getGistCreds();
+      if (!creds.token) {
+        showToast('Primero vinculá tu Token con "Vincular y Subir a GitHub".', 'warn');
+        return;
+      }
+      const baseUrl = window.location.href.split('#')[0].split('?')[0];
+      const magicUrl = `${baseUrl}#sync=${encodeURIComponent(creds.token)}${creds.gistId ? `&gist=${encodeURIComponent(creds.gistId)}` : ''}`;
+      copyText(magicUrl);
+      showToast('Link Mágico copiado. Abrilo en tu iPad o celular para vincularlo solo.', 'success');
+    }
+
+    function checkMagicSyncHash() {
+      try {
+        const hash = window.location.hash || '';
+        if (!hash.includes('sync=')) return false;
+        const params = new URLSearchParams(hash.replace(/^#/, ''));
+        const tok = sanitizeGitHubToken(params.get('sync') || '');
+        const gid = sanitizeGistId(params.get('gist') || '');
+        if (tok) {
+          saveGistCreds(tok, gid);
+          history.replaceState(null, '', window.location.pathname + window.location.search);
+          return true;
+        }
+      } catch (e) {}
+      return false;
     }
 
     function buildBackupPayload() {
@@ -2547,6 +2667,7 @@
 
     window.addEventListener('DOMContentLoaded', () => {
       loadLocalState();
+      const linkedViaHash = checkMagicSyncHash();
       setupPwaAssets();
       syncControlsWithState();
       renderAll();
@@ -2556,9 +2677,9 @@
       setInterval(updateUtcClock, 1000);
 
       const creds = getGistCreds();
-      if (creds.token && creds.gistId) {
-        updateSyncIndicators(`GIST ${creds.gistId.slice(0, 6)}`, true);
-        pullFromGist(true);
+      if (creds.token) {
+        updateSyncIndicators(creds.gistId ? `GIST ${creds.gistId.slice(0, 6)}` : 'GITHUB OK', true);
+        pullFromGist(!linkedViaHash);
       }
     });
   </script>
