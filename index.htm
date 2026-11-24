@@ -75,7 +75,7 @@
         <div class="min-w-0">
           <div class="flex items-center gap-1.5">
             <h1 class="text-xs sm:text-base font-bold tracking-tight text-white leading-none whitespace-nowrap">BAIRES FLY</h1>
-            <span class="hidden sm:inline-block text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded bg-orange-500/10 text-orange-400 border border-orange-500/25">EFB v4.3</span>
+            <span class="hidden sm:inline-block text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded bg-orange-500/10 text-orange-400 border border-orange-500/25">EFB v4.4</span>
           </div>
           <p class="text-[10px] sm:text-[11px] text-slate-400 mt-0.5 truncate">LJ35A • SADF</p>
         </div>
@@ -229,25 +229,45 @@
             </div>
           </div>
 
-          <!-- Mission Preference -->
-          <div class="lg:col-span-3 space-y-1.5">
-            <label for="mission-pref" class="text-[11px] font-semibold uppercase tracking-wider text-slate-400 block">Operación</label>
-            <select id="mission-pref" onchange="setMissionPref(this.value)" class="w-full min-h-[44px] bg-efb-bg border border-efb-border rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:border-orange-500">
-              <option value="auto">Automático (Realista)</option>
-              <option value="base">Forzar Retorno a SADF</option>
-              <option value="ferry">Solo Ferry Vacío</option>
-            </select>
-          </div>
+          <!-- Preferences + Generate Button -->
+          <div class="lg:col-span-6 space-y-3">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <!-- Region / Style Preference -->
+              <div class="space-y-1.5">
+                <label for="region-pref" class="text-[11px] font-semibold uppercase tracking-wider text-slate-400 block">Zona / Estilo de Ruta</label>
+                <select id="region-pref" onchange="setRegionPref(this.value)" class="w-full min-h-[42px] bg-efb-bg border border-efb-border rounded-xl px-3 py-2 text-xs sm:text-sm text-white focus:outline-none focus:border-orange-500">
+                  <option value="diverse">Diverso (Mix de Regiones y Tramos)</option>
+                  <option value="argentina">Solo Argentina (Cabotaje)</option>
+                  <option value="chile">Foco Chile / Cordillera</option>
+                  <option value="bra_ury">Foco Brasil / Uruguay</option>
+                  <option value="patagonia">Foco Patagonia</option>
+                  <option value="norte">Foco Norte / Bolivia / Paraguay</option>
+                  <option value="multileg">Multi-Tramo (3 a 5 Paradas)</option>
+                  <option value="roundtrip">Ida y Vuelta al Origen</option>
+                </select>
+              </div>
 
-          <!-- Generate Button -->
-          <div class="lg:col-span-3">
+              <!-- Mission Preference -->
+              <div class="space-y-1.5">
+                <label for="mission-pref" class="text-[11px] font-semibold uppercase tracking-wider text-slate-400 block">Operación</label>
+                <select id="mission-pref" onchange="setMissionPref(this.value)" class="w-full min-h-[42px] bg-efb-bg border border-efb-border rounded-xl px-3 py-2 text-xs sm:text-sm text-white focus:outline-none focus:border-orange-500">
+                  <option value="auto">Automático (Realista)</option>
+                  <option value="base">Forzar Retorno a SADF</option>
+                  <option value="ferry">Solo Ferry Vacío</option>
+                </select>
+              </div>
+            </div>
+
             <button onclick="generateDispatches()" class="w-full min-h-[44px] py-2.5 px-4 rounded-xl bg-orange-500 hover:bg-orange-600 active:scale-[0.99] text-white font-bold text-sm shadow-lg shadow-orange-500/20 transition flex items-center justify-center gap-2">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-              Generar Órdenes
+              Generar Órdenes Variadas
             </button>
           </div>
         </div>
       </div>
+
+      <!-- Dispatch Summary Bar -->
+      <div id="dispatch-meta-bar" class="flex flex-wrap items-center justify-between gap-2 px-1 text-[11px] font-mono text-slate-400"></div>
 
       <!-- Dispatch Cards Grid -->
       <div id="dispatch-list" class="grid grid-cols-1 lg:grid-cols-2 gap-4"></div>
@@ -596,6 +616,7 @@
         availableHours: 3.0,
         longRangeMode: false,
         missionPref: 'auto',
+        regionPref: 'diverse',
         sceneryFilter: 'all',
         mapZoom: 'south',
         lastBackupAt: null,
@@ -720,670 +741,10 @@
     }
 
     // =========================================================================
-    // 3. PWA NATIVE ICON, MANIFEST & INSTALL PROMPT
+    // 6. DISPATCH GENERATOR (DIVERSE MULTI-LEG 1-5 STOPS, OPEN-JAW & REGIONS)
     // =========================================================================
-    function generatePngAppIconDataUrl(size) {
-      const dim = size || 512;
-      try {
-        const canvas = document.createElement('canvas');
-        canvas.width = dim;
-        canvas.height = dim;
-        const ctx = canvas.getContext('2d');
-        const s = dim / 512;
+    const BUE_METRO = ['SADF', 'SABE', 'SAEZ'];
 
-        ctx.fillStyle = '#090d14';
-        ctx.fillRect(0, 0, dim, dim);
-
-        ctx.fillStyle = '#101622';
-        ctx.beginPath();
-        ctx.roundRect(36 * s, 36 * s, 440 * s, 440 * s, 96 * s);
-        ctx.fill();
-
-        ctx.strokeStyle = '#f97316';
-        ctx.lineWidth = Math.max(4, 12 * s);
-        ctx.stroke();
-
-        const grad = ctx.createLinearGradient(140 * s, 120 * s, 372 * s, 370 * s);
-        grad.addColorStop(0, '#fb923c');
-        grad.addColorStop(1, '#ea580c');
-        ctx.fillStyle = grad;
-        ctx.beginPath();
-        ctx.moveTo(256 * s, 110 * s);
-        ctx.lineTo(382 * s, 355 * s);
-        ctx.lineTo(256 * s, 305 * s);
-        ctx.lineTo(130 * s, 355 * s);
-        ctx.closePath();
-        ctx.fill();
-
-        ctx.fillStyle = '#f8fafc';
-        ctx.font = `700 ${Math.round(34 * s)}px monospace`;
-        ctx.textAlign = 'center';
-        ctx.fillText('BAIRES FLY', 256 * s, 422 * s);
-
-        return canvas.toDataURL('image/png');
-      } catch (e) {
-        return '';
-      }
-    }
-
-    function setupPwaAssets() {
-      const icon192 = generatePngAppIconDataUrl(192);
-      const icon512 = generatePngAppIconDataUrl(512);
-      if (icon512) {
-        const appleLink = document.getElementById('apple-touch-icon-link');
-        const favLink = document.getElementById('favicon-link');
-        if (appleLink) appleLink.href = icon512;
-        if (favLink) favLink.href = icon192 || icon512;
-      }
-
-      try {
-        const pageUrl = window.location.href.split('#')[0].split('?')[0];
-        const scopeUrl = new URL('.', pageUrl).href;
-        const icons = [];
-        if (icon192) icons.push({ src: icon192, sizes: '192x192', type: 'image/png', purpose: 'any' });
-        if (icon512) icons.push({ src: icon512, sizes: '512x512', type: 'image/png', purpose: 'any maskable' });
-
-        const manifest = {
-          id: pageUrl,
-          name: 'Baires Fly — Pilot EFB',
-          short_name: 'Baires Fly',
-          description: 'Crew Dispatch & Learjet 35A EFB para MSFS 2024',
-          start_url: pageUrl,
-          scope: scopeUrl,
-          display: 'standalone',
-          orientation: 'any',
-          background_color: '#090d14',
-          theme_color: '#090d14',
-          icons
-        };
-        const dataUri = 'data:application/manifest+json;charset=utf-8,' + encodeURIComponent(JSON.stringify(manifest));
-        const link = document.getElementById('pwa-manifest-link');
-        if (link) link.href = dataUri;
-      } catch (e) {}
-
-      const isStandalone = window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
-      const isMobileOrTablet = /iPad|iPhone|iPod|Android/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-      const dismissed = sessionStorage.getItem('bf_install_banner_dismissed') === '1';
-
-      if (!isStandalone && isMobileOrTablet && !dismissed) {
-        const banner = document.getElementById('pwa-install-banner');
-        const hint = document.getElementById('pwa-install-hint');
-        const isIos = /iPad|iPhone|iPod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-        if (hint && isIos) {
-          hint.textContent = 'En Safari tocá Compartir ⍗ y luego "Agregar a pantalla de inicio".';
-        }
-        if (banner) banner.classList.remove('hidden');
-      }
-    }
-
-    window.addEventListener('beforeinstallprompt', e => {
-      e.preventDefault();
-      deferredInstallPrompt = e;
-      const isMobileWidth = window.innerWidth < 640;
-      const hdrBtn = document.getElementById('header-install-btn');
-      const modalBtn = document.getElementById('modal-native-install-btn');
-      if (hdrBtn && !isMobileWidth) {
-        hdrBtn.classList.remove('hidden');
-        hdrBtn.classList.add('flex');
-      }
-      if (modalBtn) modalBtn.classList.remove('hidden');
-    });
-
-    async function triggerPwaInstall() {
-      if (deferredInstallPrompt) {
-        deferredInstallPrompt.prompt();
-        const choice = await deferredInstallPrompt.userChoice;
-        if (choice && choice.outcome === 'accepted') {
-          showToast('¡Baires Fly instalada en tu pantalla de inicio!', 'success');
-          dismissInstallBanner();
-        }
-        deferredInstallPrompt = null;
-        return;
-      }
-      openBackupModal();
-      showToast('Seguí los pasos de instalación en pantalla para agregarla al inicio.', 'warn');
-    }
-
-    function dismissInstallBanner() {
-      sessionStorage.setItem('bf_install_banner_dismissed', '1');
-      const banner = document.getElementById('pwa-install-banner');
-      if (banner) banner.classList.add('hidden');
-    }
-
-    // =========================================================================
-    // 4. GITHUB GIST AUTO-SYNC & PORTABLE BACKUP
-    // =========================================================================
-    function sanitizeGitHubToken(raw) {
-      let t = String(raw || '').trim().replace(/\s+/g, '');
-      const ghpMatches = t.match(/ghp_[A-Za-z0-9]{36}/g);
-      if (ghpMatches && ghpMatches.length > 0) return ghpMatches[0];
-      const patMatches = t.match(/github_pat_[A-Za-z0-9_]{20,}/g);
-      if (patMatches && patMatches.length > 0) return patMatches[0];
-      return t;
-    }
-
-    function sanitizeGistId(raw) {
-      let s = String(raw || '').trim();
-      if (s.includes('/')) {
-        const parts = s.split('/').filter(Boolean);
-        s = parts[parts.length - 1] || '';
-      }
-      return s;
-    }
-
-    function getGistCreds() {
-      try {
-        const raw = localStorage.getItem(GIST_CREDS_KEY);
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          return {
-            token: sanitizeGitHubToken(parsed.token),
-            gistId: sanitizeGistId(parsed.gistId)
-          };
-        }
-      } catch (e) {}
-      return { token: '', gistId: '' };
-    }
-
-    function saveGistCreds(token, gistId) {
-      try {
-        localStorage.setItem(
-          GIST_CREDS_KEY,
-          JSON.stringify({
-            token: sanitizeGitHubToken(token),
-            gistId: sanitizeGistId(gistId)
-          })
-        );
-      } catch (e) {}
-    }
-
-    async function findExistingBairesFlyGist(token) {
-      try {
-        const res = await fetch('https://api.github.com/gists?per_page=30', {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: 'application/vnd.github+json'
-          }
-        });
-        if (!res.ok) return '';
-        const list = await res.json();
-        if (Array.isArray(list)) {
-          const found = list.find(g => g.files && g.files['baires_fly_efb_state.json']);
-          if (found && found.id) return found.id;
-        }
-      } catch (e) {}
-      return '';
-    }
-
-    function updateSyncIndicators(label, isConnected) {
-      const syncLabel = document.getElementById('sync-status-label');
-      const cloudBadge = document.getElementById('backup-cloud-badge');
-      const gistInd = document.getElementById('gist-sync-indicator');
-      if (syncLabel) {
-        syncLabel.textContent = label;
-        syncLabel.className = `text-[10px] ${isConnected ? 'text-sky-400' : 'text-slate-500'}`;
-      }
-      if (cloudBadge) {
-        cloudBadge.textContent = label;
-        cloudBadge.className = `text-[10px] font-mono px-2 py-0.5 rounded border ${
-          isConnected ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/35' : 'bg-efb-bg border-efb-border text-slate-400'
-        }`;
-      }
-      if (gistInd) {
-        gistInd.textContent = isConnected ? `Conectado (${label})` : 'No vinculado';
-        gistInd.className = `text-[10px] font-mono ${isConnected ? 'text-emerald-400' : 'text-slate-400'}`;
-      }
-    }
-
-    async function pushToGist(silent) {
-      const creds = getGistCreds();
-      if (!creds.token) return;
-
-      const errBox = document.getElementById('gist-error-box');
-      if (errBox) errBox.classList.add('hidden');
-
-      let targetGistId = creds.gistId;
-      if (!targetGistId) {
-        targetGistId = await findExistingBairesFlyGist(creds.token);
-      }
-
-      const payload = buildBackupPayload();
-      const body = {
-        description: 'Baires Fly Pilot EFB — Fleet & Logbook Sync',
-        files: {
-          'baires_fly_efb_state.json': {
-            content: JSON.stringify(payload, null, 2)
-          }
-        }
-      };
-
-      try {
-        let res;
-        if (targetGistId) {
-          res = await fetch(`https://api.github.com/gists/${targetGistId}`, {
-            method: 'PATCH',
-            headers: {
-              Authorization: `Bearer ${creds.token}`,
-              Accept: 'application/vnd.github+json',
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(body)
-          });
-          if (res.status === 404) {
-            targetGistId = '';
-          }
-        }
-
-        if (!targetGistId) {
-          body.public = false;
-          res = await fetch('https://api.github.com/gists', {
-            method: 'POST',
-            headers: {
-              Authorization: `Bearer ${creds.token}`,
-              Accept: 'application/vnd.github+json',
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(body)
-          });
-        }
-
-        if (!res.ok) {
-          let detail = `HTTP ${res.status}`;
-          try {
-            const errJson = await res.json();
-            if (errJson && errJson.message) detail = `${res.status}: ${errJson.message}`;
-          } catch (e) {}
-          throw new Error(detail);
-        }
-
-        const data = await res.json();
-        if (data && data.id) {
-          saveGistCreds(creds.token, data.id);
-          const idInput = document.getElementById('gist-id-input');
-          if (idInput) idInput.value = data.id;
-          state.hasUnsavedBackupChanges = false;
-          state.lastBackupAt = new Date().toISOString();
-          saveLocalState();
-          updateBackupBadge();
-          updateSyncIndicators(`GIST ${data.id.slice(0, 6)}`, true);
-          if (!silent) showToast(`¡Conectado! Sincronizado con GitHub (${data.id.slice(0, 8)}...).`, 'success');
-        }
-      } catch (err) {
-        if (!silent) {
-          const msg = err && err.message ? err.message : 'Error de red';
-          if (errBox) {
-            errBox.innerHTML = `<strong>Error GitHub (${msg}):</strong><br/>• Asegurate de usar un <strong>Token (classic)</strong> (empieza con <code>ghp_</code>) con la casilla <code>gist</code> tildada.<br/>• Si pusiste algo en el casillero <em>Gist ID</em>, borralo y dejalo vacío.`;
-            errBox.classList.remove('hidden');
-          }
-          showToast(`Error GitHub (${msg}). Revisá el detalle en el panel.`, 'error');
-        }
-      }
-    }
-
-    async function pullFromGist(silent) {
-      const tokenInput = document.getElementById('gist-token-input');
-      const idInput = document.getElementById('gist-id-input');
-      const existing = getGistCreds();
-      const token = sanitizeGitHubToken(tokenInput ? tokenInput.value : existing.token);
-      let gistId = sanitizeGistId(idInput ? idInput.value : existing.gistId);
-
-      if (!token) {
-        if (!silent) showToast('Ingresá tu Token de GitHub primero.', 'warn');
-        return;
-      }
-      if (!gistId) {
-        gistId = await findExistingBairesFlyGist(token);
-      }
-      if (!gistId) {
-        if (!silent) showToast('No se encontró ningún Gist previo. Tocá "Vincular y Subir a GitHub" primero.', 'warn');
-        return;
-      }
-
-      try {
-        const res = await fetch(`https://api.github.com/gists/${gistId}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: 'application/vnd.github+json'
-          }
-        });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
-        const fileObj = data && data.files && data.files['baires_fly_efb_state.json'];
-        if (!fileObj || !fileObj.content) throw new Error('Archivo de estado vacío');
-
-        const parsed = JSON.parse(fileObj.content);
-        const migrated = migrateState(parsed);
-        migrated.hasUnsavedBackupChanges = false;
-        state = migrated;
-        saveLocalState();
-        saveGistCreds(token, gistId);
-        if (tokenInput) tokenInput.value = token;
-        if (idInput) idInput.value = gistId;
-        updateSyncIndicators(`GIST ${gistId.slice(0, 6)}`, true);
-
-        syncControlsFromState();
-        renderAll();
-        generateDispatches();
-        if (!silent) showToast('Estado descargado y sincronizado desde GitHub.', 'success');
-      } catch (err) {
-        if (!silent) {
-          showToast(`No se pudo descargar desde GitHub (${err.message || 'error'}).`, 'error');
-        }
-      }
-    }
-
-    async function connectAndPushGist() {
-      const tokenInput = document.getElementById('gist-token-input');
-      const idInput = document.getElementById('gist-id-input');
-      const token = sanitizeGitHubToken(tokenInput ? tokenInput.value : '');
-      const gistId = sanitizeGistId(idInput ? idInput.value : '');
-
-      if (!token) {
-        showToast('Pegá tu GitHub Personal Access Token (ghp_...).', 'warn');
-        return;
-      }
-      if (tokenInput) tokenInput.value = token;
-      if (idInput) idInput.value = gistId;
-
-      saveGistCreds(token, gistId);
-      await pushToGist(false);
-    }
-
-    function scheduleGistPush() {
-      const creds = getGistCreds();
-      if (!creds.token) return;
-      clearTimeout(gistDebounceTimer);
-      gistDebounceTimer = setTimeout(() => {
-        pushToGist(true);
-      }, 1500);
-    }
-
-    function copyMagicSyncLink() {
-      const creds = getGistCreds();
-      if (!creds.token || !creds.gistId) {
-        showToast('Primero vinculá tu cuenta con "Vincular y Subir a GitHub".', 'warn');
-        return;
-      }
-      const baseUrl = window.location.href.split('#')[0].split('?')[0];
-      const magicUrl = `${baseUrl}#sync=${encodeURIComponent(creds.token)}:${encodeURIComponent(creds.gistId)}`;
-      copyText(magicUrl, 'Link Mágico para iPad / Celular');
-    }
-
-    async function checkMagicLinkOnBoot() {
-      const hash = window.location.hash || '';
-      if (!hash.startsWith('#sync=')) return false;
-      const raw = decodeURIComponent(hash.slice(6));
-      const parts = raw.split(':');
-      if (parts.length >= 2 && parts[0] && parts[1]) {
-        saveGistCreds(parts[0], parts[1]);
-        try {
-          history.replaceState(null, '', window.location.pathname + window.location.search);
-        } catch (e) {}
-        await pullFromGist(false);
-        return true;
-      }
-      return false;
-    }
-
-    function buildBackupPayload() {
-      return {
-        app: 'Baires Fly Pilot EFB',
-        schemaVersion: SCHEMA_VERSION,
-        exportedAt: new Date().toISOString(),
-        state: Object.assign({}, state, { hasUnsavedBackupChanges: false })
-      };
-    }
-
-    function openBackupModal() {
-      const creds = getGistCreds();
-      const tokenInput = document.getElementById('gist-token-input');
-      const idInput = document.getElementById('gist-id-input');
-      const errBox = document.getElementById('gist-error-box');
-      if (errBox) errBox.classList.add('hidden');
-      if (tokenInput) tokenInput.value = creds.token || '';
-      if (idInput) idInput.value = creds.gistId || '';
-
-      const totalHrs = (state.fleet['LV-BPA'].totalHours + state.fleet['LV-IYQ'].totalHours).toFixed(1);
-      const enabledCount = Object.values(state.enabledSceneries).filter(Boolean).length;
-      const summaryEl = document.getElementById('backup-snapshot-summary');
-      if (summaryEl) {
-        summaryEl.innerHTML = `
-          <div>
-            <span class="text-[10px] text-slate-400 block">BITÁCORA</span>
-            <strong class="text-white">${state.logbook.length} tramos</strong>
-          </div>
-          <div>
-            <span class="text-[10px] text-slate-400 block">HORAS FLOTA</span>
-            <strong class="text-orange-400">${totalHrs} hs</strong>
-          </div>
-          <div>
-            <span class="text-[10px] text-slate-400 block">ESCENARIOS</span>
-            <strong class="text-emerald-400">${enabledCount}/${Object.keys(AIRPORTS).length}</strong>
-          </div>
-        `;
-      }
-      document.getElementById('backup-modal').classList.remove('hidden');
-    }
-
-    function closeBackupModal() {
-      document.getElementById('backup-modal').classList.add('hidden');
-    }
-
-    function exportBackupFile() {
-      const payload = buildBackupPayload();
-      const jsonStr = JSON.stringify(payload, null, 2);
-      const blob = new Blob([jsonStr], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      const stamp = new Date().toISOString().slice(0, 10);
-      a.href = url;
-      a.download = `baires-fly-backup-${stamp}.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-
-      state.hasUnsavedBackupChanges = false;
-      state.lastBackupAt = new Date().toISOString();
-      saveLocalState();
-      updateBackupBadge();
-      showToast('Archivo de respaldo .JSON descargado.', 'success');
-    }
-
-    function copyBackupToClipboard() {
-      const jsonStr = JSON.stringify(buildBackupPayload());
-      copyText(jsonStr, 'Respaldo JSON');
-      state.hasUnsavedBackupChanges = false;
-      saveLocalState();
-      updateBackupBadge();
-    }
-
-    function applyImportedJsonString(rawStr) {
-      try {
-        const parsed = JSON.parse(rawStr);
-        const migrated = migrateState(parsed);
-        migrated.hasUnsavedBackupChanges = false;
-        state = migrated;
-        saveState(false);
-        syncControlsFromState();
-        renderAll();
-        generateDispatches();
-        closeBackupModal();
-        showToast(`Respaldo restaurado (${state.logbook.length} vuelos en bitácora).`, 'success');
-      } catch (e) {
-        showToast('El archivo o texto JSON no es válido.', 'error');
-      }
-    }
-
-    function importBackupFromFile(event) {
-      const file = event.target.files && event.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = e => {
-        applyImportedJsonString(String(e.target.result || ''));
-        event.target.value = '';
-      };
-      reader.readAsText(file);
-    }
-
-    function importBackupFromText() {
-      const inp = document.getElementById('backup-paste-input');
-      const txt = inp ? inp.value.trim() : '';
-      if (!txt) {
-        showToast('Pegá el código JSON antes de restaurar.', 'warn');
-        return;
-      }
-      applyImportedJsonString(txt);
-      if (inp) inp.value = '';
-    }
-
-    // =========================================================================
-    // 5. AVIATION MATH, LEARJET 35A PERFORMANCE & SIMBRIEF
-    // =========================================================================
-    function calcDistanceNM(icaoA, icaoB) {
-      const a = AIRPORTS[icaoA];
-      const b = AIRPORTS[icaoB];
-      if (!a || !b) return 0;
-      const toRad = deg => (deg * Math.PI) / 180;
-      const R = 3440.065; // Earth radius in NM
-      const dLat = toRad(b.lat - a.lat);
-      const dLon = toRad(b.lon - a.lon);
-      const lat1 = toRad(a.lat);
-      const lat2 = toRad(b.lat);
-      const h =
-        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-        Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
-      const c = 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
-      return Math.round(R * c);
-    }
-
-    function calcBearing(icaoA, icaoB) {
-      const a = AIRPORTS[icaoA];
-      const b = AIRPORTS[icaoB];
-      if (!a || !b) return 0;
-      const toRad = d => (d * Math.PI) / 180;
-      const toDeg = r => (r * 180) / Math.PI;
-      const lat1 = toRad(a.lat);
-      const lat2 = toRad(b.lat);
-      const dLon = toRad(b.lon - a.lon);
-      const y = Math.sin(dLon) * Math.cos(lat2);
-      const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
-      return (Math.round(toDeg(Math.atan2(y, x))) + 360) % 360;
-    }
-
-    function calcEETMin(distNM) {
-      // Learjet 35A realistic block-to-block profile including climb/descent
-      const cruiseKt = distNM < 180 ? 330 : distNM < 450 ? 410 : 445;
-      const airMin = Math.round((distNM / cruiseKt) * 60 + 14);
-      return Math.max(22, airMin);
-    }
-
-    function calcRVSMFlightLevel(icaoA, icaoB, distNM) {
-      const hdg = calcBearing(icaoA, icaoB);
-      const isEast = hdg >= 0 && hdg < 180;
-      if (distNM < 140) return isEast ? 'FL190' : 'FL200';
-      if (distNM < 320) return isEast ? 'FL290' : 'FL300';
-      if (distNM < 650) return isEast ? 'FL350' : 'FL360';
-      return isEast ? 'FL390' : 'FL410';
-    }
-
-    function calcLearjetPerformance(fromIcao, toIcao, distNM, eetMin, paxCount, isMedevac) {
-      const orig = AIRPORTS[fromIcao];
-      const dest = AIRPORTS[toIcao];
-
-      // Fuel calculation in LBS (LJ35A burns ~1350-1500 lb/hr average)
-      const tripLb = Math.round((eetMin / 60) * 1420);
-      const reserveLb = 1350; // ~45 min IFR reserve + alternate
-      const taxiLb = 200;
-      const blockLb = Math.min(6238, Math.max(2100, Math.round((tripLb + reserveLb + taxiLb) / 50) * 50));
-
-      // Tank distribution (LJ35A max: Wings 2428 lb, Tips 2440 lb, Fuselage 1370 lb)
-      const wingLb = Math.min(2420, Math.round(blockLb * 0.44));
-      const tipLb = Math.min(2440, Math.round(blockLb * 0.44));
-      const fuselageLb = Math.max(0, blockLb - wingLb - tipLb);
-
-      // Weights in LBS (BOW ~10,150 lb, MTOW 18,300 lb, MLW 15,300 lb)
-      const bowLb = isMedevac ? 10450 : 10150;
-      const payloadLb = paxCount * 195 + (isMedevac ? 350 : paxCount > 0 ? 180 : 0);
-      const zfwLb = bowLb + payloadLb;
-      const towLb = Math.min(18300, zfwLb + blockLb - taxiLb);
-      const elwLb = Math.max(zfwLb + 900, towLb - tripLb);
-      const mlwWarning = elwLb > 15300;
-
-      // Takeoff Flaps & V-Speeds
-      const shortOrHigh = orig.rwyFt < 6600 || orig.elev > 2500;
-      const toFlaps = shortOrHigh ? 'FLAPS 20°' : 'FLAPS 8°';
-      const weightDelta = (towLb - 14000) / 1000;
-      const v1 = Math.round((shortOrHigh ? 114 : 119) + weightDelta * 3.2);
-      const vr = v1 + 5;
-      const v2 = vr + 8;
-
-      // Landing Vref (Flaps 40°)
-      const ldgDelta = (elwLb - 12500) / 1000;
-      const vref = Math.round(115 + ldgDelta * 3.0);
-      const vapp = vref + 5;
-
-      return {
-        tripLb,
-        reserveLb,
-        blockLb,
-        wingLb,
-        tipLb,
-        fuselageLb,
-        zfwLb,
-        towLb,
-        elwLb,
-        mlwWarning,
-        toFlaps,
-        v1,
-        vr,
-        v2,
-        vref,
-        vapp
-      };
-    }
-
-    function getAtsRoute(fromIcao, toIcao) {
-      const key = `${fromIcao}-${toIcao}`;
-      if (ATS_CORRIDORS[key]) return ATS_CORRIDORS[key];
-      return `${fromIcao} DCT ${toIcao}`;
-    }
-
-    function buildSimBriefUrl(leg, reg, etdUtcStr) {
-      const route = getAtsRoute(leg.from, leg.to);
-      const flNum = leg.fl.replace('FL', '') + '00';
-      const params = new URLSearchParams({
-        type: 'LJ35',
-        orig: leg.from,
-        dest: leg.to,
-        route: route,
-        fl: flNum,
-        pax: String(leg.pax),
-        reg: reg,
-        fltnum: reg.replace('-', ''),
-        units: 'LBS'
-      });
-      if (etdUtcStr && etdUtcStr.includes(':')) {
-        const [hh, mm] = etdUtcStr.replace('Z', '').trim().split(':');
-        if (hh && mm) {
-          params.set('deph', hh);
-          params.set('depm', mm);
-        }
-      }
-      return `https://dispatch.simbrief.com/options/custom?${params.toString()}`;
-    }
-
-    function formatMinutes(totalMin) {
-      const mins = Math.max(0, Math.round(totalMin));
-      const h = Math.floor(mins / 60);
-      const m = mins % 60;
-      if (h === 0) return `${m}m`;
-      return `${h}h ${String(m).padStart(2, '0')}m`;
-    }
-
-    // =========================================================================
-    // 6. DISPATCH GENERATOR (±15 MIN TARGET WINDOW & MULTI-LEG ROLE LOGIC)
-    // =========================================================================
     function getAvailableDestinations(excludeIcao) {
       return Object.values(AIRPORTS).filter(ap => {
         if (ap.icao === excludeIcao) return false;
@@ -1396,6 +757,70 @@
     function pickRandom(arr) {
       if (!arr || arr.length === 0) return null;
       return arr[Math.floor(Math.random() * arr.length)];
+    }
+
+    function shuffleArray(arr) {
+      const copy = arr.slice();
+      for (let i = copy.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      return copy;
+    }
+
+    function airportMatchesTheme(ap, theme) {
+      if (!ap) return false;
+      if (theme === 'ARG') return ap.country === 'ARG';
+      if (theme === 'CHL') {
+        return ap.country === 'CHL' || ['SAME', 'SAZS', 'SAZY', 'SAZN', 'SASA', 'SAWC', 'SAWH'].includes(ap.icao);
+      }
+      if (theme === 'BRA_URY') {
+        return ap.country === 'BRA' || ap.country === 'URY' || ['SARI', 'SARP'].includes(ap.icao);
+      }
+      if (theme === 'PATAGONIA') {
+        return ap.lat <= -37.2;
+      }
+      if (theme === 'NORTE') {
+        return ap.lat >= -33.2 && ap.region !== 'usa_corridor';
+      }
+      return true;
+    }
+
+    function chainSatisfiesTheme(waypoints, theme) {
+      const stops = waypoints.slice(1).map(c => AIRPORTS[c]).filter(Boolean);
+      if (stops.length === 0) return false;
+      if (theme === 'ARG') return stops.every(ap => ap.country === 'ARG');
+      if (theme === 'CHL') return stops.some(ap => ap.country === 'CHL');
+      if (theme === 'BRA_URY') return stops.some(ap => ap.country === 'BRA' || ap.country === 'URY');
+      if (theme === 'PATAGONIA') return stops.some(ap => ap.lat <= -38.5);
+      if (theme === 'NORTE') return stops.some(ap => ap.lat >= -28.0);
+      return true;
+    }
+
+    function getThemeMeta(waypoints, themeHint) {
+      const stops = waypoints.slice(1).map(c => AIRPORTS[c]).filter(Boolean);
+      const countries = [...new Set(stops.map(s => s.country))];
+      if (themeHint === 'CHL' || countries.includes('CHL')) {
+        return { tag: 'CHILE / ANDES', color: 'text-cyan-300 bg-cyan-500/10 border-cyan-500/30' };
+      }
+      if (themeHint === 'PATAGONIA' || stops.every(s => s.lat <= -37.2)) {
+        return { tag: 'PATAGONIA', color: 'text-indigo-300 bg-indigo-500/10 border-indigo-500/30' };
+      }
+      if (countries.length === 1 && countries[0] === 'ARG') {
+        return { tag: 'ARGENTINA', color: 'text-sky-300 bg-sky-500/10 border-sky-500/30' };
+      }
+      if (countries.some(c => c === 'BRA' || c === 'URY') && !countries.includes('PRY') && !countries.includes('BOL')) {
+        return { tag: countries.includes('BRA') ? 'BRASIL / ATLÁNTICO' : 'URUGUAY', color: 'text-emerald-300 bg-emerald-500/10 border-emerald-500/30' };
+      }
+      if (countries.includes('PRY') || countries.includes('BOL') || themeHint === 'NORTE') {
+        return { tag: 'NORTE / CONO SUR', color: 'text-amber-300 bg-amber-500/10 border-amber-500/30' };
+      }
+      return { tag: countries.join(' • '), color: 'text-slate-300 bg-efb-bg border-efb-border' };
+    }
+
+    function angleDiffDeg(a, b) {
+      const d = Math.abs(a - b) % 360;
+      return d > 180 ? 360 - d : d;
     }
 
     function buildLegObject(fromIcao, toIcao, roleType, paxCount, briefNote) {
@@ -1456,8 +881,11 @@
 
       return {
         id: 'ms_' + Math.random().toString(36).slice(2, 9),
-        title: `Corredor Ejecutivo Internacional ➔ ${AIRPORTS[destUsa].city}`,
+        title: `Corredor Internacional ➔ ${AIRPORTS[destUsa].city}`,
         badge: 'LARGO ALCANCE',
+        regionTag: 'CORREDOR EE.UU.',
+        regionColor: 'text-purple-300 bg-purple-500/10 border-purple-500/30',
+        isOpenJaw: true,
         summary: isMedevac
           ? `Traslado sanitario de alta complejidad hacia centro médico en Florida con 3 escalas técnicas de combustible.`
           : `Chárter ejecutivo de fin de semana hacia ${AIRPORTS[destUsa].name} con escalas técnicas coordinadas en Sudamérica y Caribe.`,
@@ -1467,6 +895,419 @@
         diffMin: totalMin - Math.round(state.availableHours * 60),
         schedule: null
       };
+    }
+
+    function assembleMissionFromWaypoints(waypoints, targetMin, themeHint, isMedevacAc) {
+      const legCount = waypoints.length - 1;
+      const origin = waypoints[0];
+      const finalDest = waypoints[waypoints.length - 1];
+      const isClosedLoop = finalDest === origin;
+      const endsAtBase = finalDest === 'SADF' && origin !== 'SADF';
+      const forceFerryOnly = state.missionPref === 'ferry';
+      const primaryRole = isMedevacAc ? 'MEDEVAC' : 'VIP';
+      const themeMeta = getThemeMeta(waypoints, themeHint);
+
+      const legs = [];
+      let badge = forceFerryOnly ? 'FERRY' : primaryRole;
+      let summary = '';
+
+      if (legCount === 1) {
+        const dest = AIRPORTS[finalDest];
+        const role = endsAtBase ? 'RETORNO A BASE' : forceFerryOnly ? 'FERRY' : primaryRole;
+        const pax = role === 'FERRY' || role === 'RETORNO A BASE' ? 0 : isMedevacAc ? 2 : Math.floor(Math.random() * 5) + 2;
+        const note =
+          role === 'FERRY'
+            ? `Vuelo de traslado vacío hacia ${dest.city} para posicionamiento operativo.`
+            : role === 'RETORNO A BASE'
+            ? `Regreso directo a San Fernando (SADF) para cierre de rotación.`
+            : isMedevacAc
+            ? `Operativo sanitario urgente con equipo médico y camilla hacia ${dest.city}.`
+            : `Vuelo ejecutivo directo con ${pax} pasajeros VIP hacia ${dest.name}.`;
+        legs.push(buildLegObject(origin, finalDest, role, pax, note));
+        badge = role;
+        summary = note;
+      } else if (forceFerryOnly) {
+        for (let i = 0; i < legCount; i++) {
+          const a = waypoints[i];
+          const b = waypoints[i + 1];
+          const isLastBase = i === legCount - 1 && b === 'SADF';
+          const role = isLastBase ? 'RETORNO A BASE' : 'FERRY';
+          legs.push(
+            buildLegObject(
+              a,
+              b,
+              role,
+              0,
+              isLastBase
+                ? `Tramo final de reposicionamiento vacío hacia hangar Baires Fly (SADF).`
+                : `Traslado técnico vacío hacia ${AIRPORTS[b].city} (escala de ${TURNAROUND_MIN} min).`
+            )
+          );
+        }
+        badge = endsAtBase ? 'RETORNO A BASE' : 'FERRY';
+        summary = `Rotación Ferry de ${legCount} tramos sin pasajeros con escalas técnicas de ${TURNAROUND_MIN} min.`;
+      } else if (isMedevacAc) {
+        const pattern = Math.random() < 0.55 ? 'PICKUP_MEDEVAC' : 'MULTI_TRANSFER';
+        for (let i = 0; i < legCount; i++) {
+          const a = waypoints[i];
+          const b = waypoints[i + 1];
+          let role = 'MEDEVAC';
+          let pax = 2;
+          let note = `Traslado sanitario con equipo médico hacia ${AIRPORTS[b].city}.`;
+
+          if (pattern === 'PICKUP_MEDEVAC' && i === 0) {
+            role = 'FERRY';
+            pax = 0;
+            note = `Posicionamiento sanitario urgente (sin paciente) para buscar derivación en ${AIRPORTS[b].city}.`;
+          } else if (i === legCount - 1 && b === 'SADF' && legCount >= 3 && Math.random() < 0.5) {
+            role = 'RETORNO A BASE';
+            pax = 0;
+            note = `Paciente entregado en ${AIRPORTS[a].city}; regreso sanitario vacío a base SADF.`;
+          } else if (i > 0) {
+            note = `Derivación médica de alta complejidad desde ${AIRPORTS[a].city} hacia centro hospitalario en ${AIRPORTS[b].city}.`;
+          }
+          legs.push(buildLegObject(a, b, role, pax, note));
+        }
+        badge = 'MEDEVAC';
+        summary = `Operativo sanitario de ${legCount} tramos (${isClosedLoop ? 'cierre en base' : `finalizando en ${AIRPORTS[finalDest].city}`}) con coordinación médica en tierra.`;
+      } else {
+        // Executive VIP realistic multi-leg patterns (2 to 5 legs)
+        const patterns =
+          legCount === 2
+            ? ['PICKUP_FERRY', 'DROP_FERRY', 'ROUNDTRIP_VIP']
+            : ['ROADSHOW_VIP', 'PICKUP_THEN_TOUR', 'MULTI_CLIENT_CHARTER'];
+        const pattern = pickRandom(patterns);
+        let currentPax = Math.floor(Math.random() * 4) + 3; // 3 to 6 PAX
+
+        for (let i = 0; i < legCount; i++) {
+          const a = waypoints[i];
+          const b = waypoints[i + 1];
+          const isLast = i === legCount - 1;
+          let role = 'VIP';
+          let pax = currentPax;
+          let note = '';
+
+          if (pattern === 'PICKUP_FERRY') {
+            if (i === 0) {
+              role = 'FERRY';
+              pax = 0;
+              note = `Tramo Ferry vacío hacia ${AIRPORTS[b].city} para embarcar a ${currentPax} pasajeros VIP en FBO.`;
+            } else {
+              role = 'VIP';
+              pax = currentPax;
+              note = `Embarque de ${pax} pasajeros VIP en ${AIRPORTS[a].city} con destino ${AIRPORTS[b].city}.`;
+            }
+          } else if (pattern === 'DROP_FERRY') {
+            if (isLast) {
+              role = b === 'SADF' ? 'RETORNO A BASE' : 'FERRY';
+              pax = 0;
+              note = `Desembarque de pasajeros en ${AIRPORTS[a].city}; regreso Ferry vacío hacia ${AIRPORTS[b].city}.`;
+            } else {
+              role = 'VIP';
+              pax = currentPax;
+              note = `Traslado ejecutivo de ${pax} PAX hacia ${AIRPORTS[b].city}.`;
+            }
+          } else if (pattern === 'ROUNDTRIP_VIP') {
+            if (i === 0) {
+              note = `Ida ejecutiva con ${pax} PAX hacia ${AIRPORTS[b].city}.`;
+            } else {
+              pax = Math.max(1, currentPax + (Math.random() > 0.5 ? -1 : 0));
+              note = `Continuación ejecutiva con ${pax} PAX tras escala de ${TURNAROUND_MIN} min en ${AIRPORTS[a].city}.`;
+            }
+          } else if (pattern === 'PICKUP_THEN_TOUR') {
+            if (i === 0) {
+              role = 'FERRY';
+              pax = 0;
+              note = `Posicionamiento Ferry vacío para recoger a la comitiva (${currentPax} PAX) en ${AIRPORTS[b].city}.`;
+            } else if (isLast && (isClosedLoop || endsAtBase) && Math.random() < 0.55) {
+              role = b === 'SADF' ? 'RETORNO A BASE' : 'FERRY';
+              pax = 0;
+              note = `Fin de gira comercial en ${AIRPORTS[a].city}; retorno vacío hacia ${AIRPORTS[b].city}.`;
+            } else {
+              if (i >= 2) currentPax = Math.max(2, Math.min(6, currentPax + (Math.random() > 0.5 ? -1 : 1)));
+              pax = currentPax;
+              note = `Gira ejecutiva con ${pax} PAX entre ${AIRPORTS[a].city} y ${AIRPORTS[b].city}.`;
+            }
+          } else if (pattern === 'MULTI_CLIENT_CHARTER') {
+            if (i === 1 && legCount >= 3) {
+              role = 'FERRY';
+              pax = 0;
+              currentPax = Math.floor(Math.random() * 4) + 2;
+              note = `Ferry intermedio de reposicionamiento hacia ${AIRPORTS[b].city} para tomar nuevo cliente (${currentPax} PAX).`;
+            } else if (isLast && endsAtBase && Math.random() < 0.45) {
+              role = 'RETORNO A BASE';
+              pax = 0;
+              note = `Cierre de chárter en ${AIRPORTS[a].city} y retorno Ferry a base SADF.`;
+            } else {
+              pax = currentPax;
+              note =
+                i === 0
+                  ? `Chárter Cliente #1: traslado de ${pax} PAX hacia ${AIRPORTS[b].city}.`
+                  : `Chárter Cliente #2: traslado de ${pax} PAX hacia ${AIRPORTS[b].city}.`;
+            }
+          } else {
+            // ROADSHOW_VIP
+            if (isLast && (isClosedLoop || endsAtBase) && Math.random() < 0.5) {
+              role = b === 'SADF' ? 'RETORNO A BASE' : 'FERRY';
+              pax = 0;
+              note = `Desembarque final en ${AIRPORTS[a].city}; retorno Ferry vacío hacia ${AIRPORTS[b].city}.`;
+            } else {
+              if (i > 0) {
+                const delta = pickRandom([-2, -1, 0, 1]);
+                currentPax = Math.max(1, Math.min(6, currentPax + delta));
+              }
+              pax = currentPax;
+              note =
+                i === 0
+                  ? `Inicio de roadshow corporativo con ${pax} ejecutivos hacia ${AIRPORTS[b].city}.`
+                  : `Escala en ${AIRPORTS[a].city}; continúan ${pax} PAX hacia ${AIRPORTS[b].city}.`;
+            }
+          }
+
+          legs.push(buildLegObject(a, b, role, pax, note));
+        }
+
+        const patternDesc =
+          pattern === 'PICKUP_FERRY'
+            ? `Posicionamiento Ferry y traslado ejecutivo`
+            : pattern === 'DROP_FERRY'
+            ? `Traslado VIP con regreso Ferry vacío`
+            : pattern === 'MULTI_CLIENT_CHARTER'
+            ? `Chárter encadenado de múltiples clientes`
+            : pattern === 'PICKUP_THEN_TOUR'
+            ? `Ferry de búsqueda y gira ejecutiva`
+            : `Gira corporativa de ${legCount} tramos`;
+
+        summary = `${patternDesc} ${
+          isClosedLoop
+            ? `con cierre en ${AIRPORTS[origin].city}.`
+            : endsAtBase
+            ? `con retorno final a base SADF.`
+            : `finalizando con pernocta en ${AIRPORTS[finalDest].city} (${finalDest}).`
+        }`;
+      }
+
+      const totalAirMin = legs.reduce((acc, l) => acc + l.eetMin, 0);
+      const totalGroundMin = (legs.length - 1) * TURNAROUND_MIN;
+      const totalMin = totalAirMin + totalGroundMin;
+      const totalNM = legs.reduce((acc, l) => acc + l.distNM, 0);
+
+      // Clean readable title
+      let title = '';
+      if (legCount === 1) {
+        title = `${AIRPORTS[origin].city} ➔ ${AIRPORTS[finalDest].city}`;
+      } else if (legCount === 2 && isClosedLoop) {
+        title = `Ida y Vuelta: ${AIRPORTS[waypoints[1]].city}`;
+      } else if (isClosedLoop || endsAtBase) {
+        const midCities = waypoints.slice(1, -1).map(c => AIRPORTS[c].city);
+        title = `Circuito ${midCities.slice(0, 2).join(' • ')}${midCities.length > 2 ? ` (+${midCities.length - 2})` : ''}`;
+      } else {
+        title = `Gira ${themeMeta.tag === 'ARGENTINA' ? 'Doméstica' : themeMeta.tag}: ${AIRPORTS[waypoints[1]].city} ➔ ${AIRPORTS[finalDest].city}`;
+      }
+
+      return {
+        id: 'ms_' + Math.random().toString(36).slice(2, 9),
+        title,
+        badge,
+        regionTag: themeMeta.tag,
+        regionColor: themeMeta.color,
+        isOpenJaw: !isClosedLoop && finalDest !== 'SADF',
+        summary,
+        legs,
+        totalMin,
+        totalNM,
+        diffMin: totalMin - targetMin,
+        schedule: null
+      };
+    }
+
+    function searchChainForSlot(opts) {
+      const {
+        origin,
+        legCounts,
+        minWin,
+        maxWin,
+        targetMin,
+        pool,
+        mustEndAt,
+        theme,
+        avoidDestinations,
+        preferOpenJaw
+      } = opts;
+
+      const minHopNM = 75;
+      const maxAttempts = 140;
+      const shuffledLegCounts = shuffleArray(legCounts);
+
+      for (let attempt = 0; attempt < maxAttempts; attempt++) {
+        const legCount = shuffledLegCounts[attempt % shuffledLegCounts.length];
+        const groundMin = (legCount - 1) * TURNAROUND_MIN;
+        const minAir = minWin - groundMin;
+        const maxAir = maxWin - groundMin;
+        const targetAir = targetMin - groundMin;
+
+        // Need at least 26 min average per leg
+        if (maxAir < legCount * 26) continue;
+
+        // 1-Leg Direct Search
+        if (legCount === 1) {
+          let candidates = pool.filter(ap => {
+            if (mustEndAt && ap.icao !== mustEndAt) return false;
+            const d = calcDistanceNM(origin, ap.icao);
+            if (d > LJ35_MAX_RANGE_NM || d < 40) return false;
+            const t = calcEETMin(d);
+            if (t < minAir || t > maxAir) return false;
+            if (theme !== 'MIX' && !chainSatisfiesTheme([origin, ap.icao], theme)) return false;
+            return true;
+          });
+          if (candidates.length === 0) continue;
+
+          const fresh = candidates.filter(ap => !avoidDestinations.has(ap.icao));
+          const picked = pickRandom(fresh.length > 0 ? fresh : candidates);
+          return [origin, picked.icao];
+        }
+
+        // Multi-Leg Dynamic Chain Builder (2 to 5 legs)
+        const waypoints = [origin];
+        const visited = new Set([origin]);
+        let curr = origin;
+        let usedAir = 0;
+        let prevBearing = null;
+        let failed = false;
+
+        for (let step = 0; step < legCount; step++) {
+          const isLastStep = step === legCount - 1;
+
+          if (isLastStep) {
+            const remMin = minAir - usedAir;
+            const remMax = maxAir - usedAir;
+            if (remMax < 24) {
+              failed = true;
+              break;
+            }
+
+            if (mustEndAt) {
+              if (curr === mustEndAt) {
+                failed = true;
+                break;
+              }
+              const d = calcDistanceNM(curr, mustEndAt);
+              const t = calcEETMin(d);
+              if (d <= LJ35_MAX_RANGE_NM && d >= minHopNM && t >= remMin && t <= remMax) {
+                const candidateChain = [...waypoints, mustEndAt];
+                if (theme === 'MIX' || chainSatisfiesTheme(candidateChain, theme)) {
+                  waypoints.push(mustEndAt);
+                  break;
+                }
+              }
+              failed = true;
+              break;
+            } else {
+              // Open-Jaw or natural closing leg
+              const lastCandidates = pool.filter(ap => {
+                if (visited.has(ap.icao)) return false;
+                if (preferOpenJaw && ap.icao === origin) return false;
+                if (BUE_METRO.includes(curr) && BUE_METRO.includes(ap.icao)) return false;
+                const d = calcDistanceNM(curr, ap.icao);
+                if (d > LJ35_MAX_RANGE_NM || d < minHopNM) return false;
+                const t = calcEETMin(d);
+                if (t < remMin || t > remMax) return false;
+                const testChain = [...waypoints, ap.icao];
+                if (theme !== 'MIX' && !chainSatisfiesTheme(testChain, theme)) return false;
+                if (theme === 'ARG' && ap.country !== 'ARG') return false;
+                return true;
+              });
+
+              if (lastCandidates.length === 0) {
+                failed = true;
+                break;
+              }
+
+              // Score final candidates: avoid repeating destinations, smooth bearing, closeness to targetAir
+              const scored = lastCandidates
+                .map(ap => {
+                  const d = calcDistanceNM(curr, ap.icao);
+                  const t = calcEETMin(d);
+                  let score = Math.random() * 25 - Math.abs(usedAir + t - targetAir) * 1.4;
+                  if (!avoidDestinations.has(ap.icao)) score += 35;
+                  if (prevBearing !== null) {
+                    const brg = calcBearing(curr, ap.icao);
+                    if (angleDiffDeg(prevBearing, brg) > 135) score -= 28;
+                  }
+                  if (theme !== 'MIX' && airportMatchesTheme(ap, theme)) score += 20;
+                  return { ap, score };
+                })
+                .sort((a, b) => b.score - a.score);
+
+              const topSlice = scored.slice(0, Math.min(4, scored.length));
+              const chosen = pickRandom(topSlice).ap;
+              waypoints.push(chosen.icao);
+              break;
+            }
+          } else {
+            // Intermediate step
+            const legsLeftAfterThis = legCount - 1 - step;
+            const maxAllowedThisLeg = maxAir - usedAir - legsLeftAfterThis * 26;
+            const idealHop = (targetAir - usedAir) / (legsLeftAfterThis + 1);
+            const hopLo = Math.max(24, Math.floor(idealHop * 0.45));
+            const hopHi = Math.min(maxAllowedThisLeg, Math.ceil(idealHop * 1.7));
+
+            if (hopHi < hopLo) {
+              failed = true;
+              break;
+            }
+
+            const interCandidates = pool.filter(ap => {
+              if (visited.has(ap.icao)) return false;
+              if (mustEndAt && ap.icao === mustEndAt) return false;
+              if (BUE_METRO.includes(origin) && BUE_METRO.includes(ap.icao)) return false;
+              if (BUE_METRO.includes(curr) && BUE_METRO.includes(ap.icao)) return false;
+              if (theme === 'ARG' && ap.country !== 'ARG') return false;
+              const d = calcDistanceNM(curr, ap.icao);
+              if (d > LJ35_MAX_RANGE_NM || d < minHopNM) return false;
+              const t = calcEETMin(d);
+              return t >= hopLo && t <= hopHi;
+            });
+
+            if (interCandidates.length === 0) {
+              failed = true;
+              break;
+            }
+
+            const scored = interCandidates
+              .map(ap => {
+                const d = calcDistanceNM(curr, ap.icao);
+                const t = calcEETMin(d);
+                let score = Math.random() * 35 - Math.abs(t - idealHop) * 0.6;
+                if (theme !== 'MIX' && airportMatchesTheme(ap, theme)) score += 40;
+                if (!avoidDestinations.has(ap.icao)) score += 22;
+                if (prevBearing !== null && !mustEndAt) {
+                  const brg = calcBearing(curr, ap.icao);
+                  if (angleDiffDeg(prevBearing, brg) > 130) score -= 25;
+                }
+                return { ap, score };
+              })
+              .sort((a, b) => b.score - a.score);
+
+            const pickPool = scored.slice(0, Math.min(6, scored.length));
+            const nextAp = pickRandom(pickPool).ap;
+            const stepBearing = calcBearing(curr, nextAp.icao);
+            const stepTime = calcEETMin(calcDistanceNM(curr, nextAp.icao));
+
+            waypoints.push(nextAp.icao);
+            visited.add(nextAp.icao);
+            prevBearing = stepBearing;
+            curr = nextAp.icao;
+            usedAir += stepTime;
+          }
+        }
+
+        if (!failed && waypoints.length === legCount + 1) {
+          return waypoints;
+        }
+      }
+
+      return null;
     }
 
     function generateDispatches() {
@@ -1479,9 +1320,24 @@
       const mustReturnBase =
         state.missionPref === 'base' ||
         (origin !== 'SADF' && (ac.legsAway >= 3 || ac.hoursAway >= 6.0 || ac.hoursUntilInspection <= 4.5));
+      const regionPref = state.regionPref || 'diverse';
 
-      const pool = getAvailableDestinations(origin).filter(ap => calcDistanceNM(origin, ap.icao) <= LJ35_MAX_RANGE_NM);
+      const pool = getAvailableDestinations(origin);
       const results = [];
+      const usedSignatures = new Set();
+      const avoidDestinations = new Set();
+
+      const registerChain = (waypoints, themeHint) => {
+        if (!waypoints || waypoints.length < 2) return false;
+        const sig = waypoints.join('-');
+        if (usedSignatures.has(sig)) return false;
+        usedSignatures.add(sig);
+        waypoints.slice(1).forEach(c => {
+          if (c !== origin && c !== 'SADF') avoidDestinations.add(c);
+        });
+        results.push(assembleMissionFromWaypoints(waypoints, targetMin, themeHint, isMedevacAc));
+        return true;
+      };
 
       // Special case: Short shuttle from SABE or SAEZ back to SADF
       if ((origin === 'SABE' || origin === 'SAEZ') && targetMin <= 75) {
@@ -1492,10 +1348,14 @@
           0,
           `Reposicionamiento Ferry vacío desde ${AIRPORTS[origin].name} hacia hangar Baires Fly en San Fernando.`
         );
+        usedSignatures.add(`${origin}-SADF`);
         results.push({
           id: 'ms_' + Math.random().toString(36).slice(2, 9),
           title: `Reposicionamiento Ferry ➔ Base SADF`,
           badge: 'RETORNO A BASE',
+          regionTag: 'BASE BUE',
+          regionColor: 'text-sky-300 bg-sky-500/10 border-sky-500/30',
+          isOpenJaw: false,
           summary: `Salto corto de posicionamiento sin pasajeros desde ${AIRPORTS[origin].city} para guardar la aeronave en base.`,
           legs: [leg],
           totalMin: leg.eetMin,
@@ -1510,207 +1370,138 @@
         results.push(buildUsaCorridorMission(origin));
       }
 
-      // Attempt to build diverse 1, 2, 3, and 4-leg rotations fitting targetMin ± 15m
-      for (let attempt = 0; attempt < 220 && results.length < 4; attempt++) {
-        const legCountChoice = [1, 2, 2, 3, 3, 4][attempt % 6];
-        const candidate = tryBuildRotation(origin, legCountChoice, minWindow, maxWindow, targetMin, pool, isMedevacAc, mustReturnBase);
-        if (!candidate) continue;
+      // Dynamic feasible leg range based on total available time
+      const maxPossibleLegs = targetMin < 80 ? 1 : targetMin < 140 ? 2 : targetMin < 200 ? 3 : targetMin < 300 ? 4 : 5;
+      const multiLegSet = maxPossibleLegs >= 4 ? [3, 4, Math.min(5, maxPossibleLegs)] : maxPossibleLegs === 3 ? [3, 2] : [2, 1];
+      const baseEnd = mustReturnBase ? 'SADF' : null;
 
-        const sig = candidate.legs.map(l => `${l.from}-${l.to}-${l.role}`).join('|');
-        if (!results.some(r => r.legs.map(l => `${l.from}-${l.to}-${l.role}`).join('|') === sig)) {
-          results.push(candidate);
+      // Build tailored slot blueprint according to Region/Style Preference
+      let slots = [];
+      if (regionPref === 'argentina') {
+        slots = [
+          { theme: 'ARG', legCounts: multiLegSet, mustEndAt: baseEnd, preferOpenJaw: !mustReturnBase },
+          { theme: 'ARG', legCounts: [Math.min(4, maxPossibleLegs), 3], mustEndAt: baseEnd, preferOpenJaw: !mustReturnBase },
+          { theme: 'PATAGONIA', legCounts: [2, 3], mustEndAt: baseEnd, preferOpenJaw: !mustReturnBase },
+          { theme: 'ARG', legCounts: [2, 3], mustEndAt: mustReturnBase ? 'SADF' : origin, preferOpenJaw: false },
+          { theme: 'ARG', legCounts: [1, 2], mustEndAt: baseEnd, preferOpenJaw: true },
+          { theme: 'ARG', legCounts: [3, 4, 2], mustEndAt: baseEnd, preferOpenJaw: true }
+        ];
+      } else if (regionPref === 'chile') {
+        slots = [
+          { theme: 'CHL', legCounts: [3, 4], mustEndAt: baseEnd, preferOpenJaw: !mustReturnBase },
+          { theme: 'CHL', legCounts: [2, 3], mustEndAt: baseEnd, preferOpenJaw: !mustReturnBase },
+          { theme: 'CHL', legCounts: [2, 3], mustEndAt: mustReturnBase ? 'SADF' : origin, preferOpenJaw: false },
+          { theme: 'CHL', legCounts: [1, 2, 3], mustEndAt: baseEnd, preferOpenJaw: true },
+          { theme: 'PATAGONIA', legCounts: [2, 3, 4], mustEndAt: baseEnd, preferOpenJaw: true },
+          { theme: 'CHL', legCounts: [3, 2, 4], mustEndAt: baseEnd, preferOpenJaw: true }
+        ];
+      } else if (regionPref === 'bra_ury') {
+        slots = [
+          { theme: 'BRA_URY', legCounts: [3, 4], mustEndAt: baseEnd, preferOpenJaw: !mustReturnBase },
+          { theme: 'BRA_URY', legCounts: [2, 3], mustEndAt: baseEnd, preferOpenJaw: !mustReturnBase },
+          { theme: 'BRA_URY', legCounts: [2, 3], mustEndAt: mustReturnBase ? 'SADF' : origin, preferOpenJaw: false },
+          { theme: 'BRA_URY', legCounts: [1, 2], mustEndAt: baseEnd, preferOpenJaw: true },
+          { theme: 'BRA_URY', legCounts: [4, 3, 2], mustEndAt: baseEnd, preferOpenJaw: true },
+          { theme: 'MIX', legCounts: [3, 2], mustEndAt: baseEnd, preferOpenJaw: true }
+        ];
+      } else if (regionPref === 'patagonia') {
+        slots = [
+          { theme: 'PATAGONIA', legCounts: [3, 4], mustEndAt: baseEnd, preferOpenJaw: !mustReturnBase },
+          { theme: 'PATAGONIA', legCounts: [2, 3], mustEndAt: baseEnd, preferOpenJaw: !mustReturnBase },
+          { theme: 'PATAGONIA', legCounts: [1, 2], mustEndAt: baseEnd, preferOpenJaw: true },
+          { theme: 'PATAGONIA', legCounts: [2, 3], mustEndAt: mustReturnBase ? 'SADF' : origin, preferOpenJaw: false },
+          { theme: 'CHL', legCounts: [3, 2], mustEndAt: baseEnd, preferOpenJaw: true },
+          { theme: 'PATAGONIA', legCounts: [4, 3, 2], mustEndAt: baseEnd, preferOpenJaw: true }
+        ];
+      } else if (regionPref === 'norte') {
+        slots = [
+          { theme: 'NORTE', legCounts: [3, 4], mustEndAt: baseEnd, preferOpenJaw: !mustReturnBase },
+          { theme: 'NORTE', legCounts: [2, 3], mustEndAt: baseEnd, preferOpenJaw: !mustReturnBase },
+          { theme: 'NORTE', legCounts: [2, 3], mustEndAt: mustReturnBase ? 'SADF' : origin, preferOpenJaw: false },
+          { theme: 'NORTE', legCounts: [1, 2], mustEndAt: baseEnd, preferOpenJaw: true },
+          { theme: 'NORTE', legCounts: [4, 3], mustEndAt: baseEnd, preferOpenJaw: true },
+          { theme: 'MIX', legCounts: [3, 2], mustEndAt: baseEnd, preferOpenJaw: true }
+        ];
+      } else if (regionPref === 'multileg') {
+        const highLegs = targetMin >= 210 ? [4, 5, 3] : [3, 2];
+        slots = [
+          { theme: 'ARG', legCounts: highLegs, mustEndAt: baseEnd, preferOpenJaw: !mustReturnBase },
+          { theme: 'CHL', legCounts: [3, 4], mustEndAt: baseEnd, preferOpenJaw: !mustReturnBase },
+          { theme: 'BRA_URY', legCounts: highLegs, mustEndAt: baseEnd, preferOpenJaw: !mustReturnBase },
+          { theme: 'PATAGONIA', legCounts: [3, 4], mustEndAt: baseEnd, preferOpenJaw: !mustReturnBase },
+          { theme: 'NORTE', legCounts: [3, 4], mustEndAt: baseEnd, preferOpenJaw: !mustReturnBase },
+          { theme: 'MIX', legCounts: highLegs, mustEndAt: mustReturnBase ? 'SADF' : origin, preferOpenJaw: false }
+        ];
+      } else if (regionPref === 'roundtrip') {
+        const loopEnd = mustReturnBase ? 'SADF' : origin;
+        slots = [
+          { theme: 'ARG', legCounts: [3, 4, 2], mustEndAt: loopEnd, preferOpenJaw: false },
+          { theme: 'CHL', legCounts: [2, 3], mustEndAt: loopEnd, preferOpenJaw: false },
+          { theme: 'BRA_URY', legCounts: [2, 3, 4], mustEndAt: loopEnd, preferOpenJaw: false },
+          { theme: 'PATAGONIA', legCounts: [2, 3], mustEndAt: loopEnd, preferOpenJaw: false },
+          { theme: 'NORTE', legCounts: [2, 3], mustEndAt: loopEnd, preferOpenJaw: false },
+          { theme: 'MIX', legCounts: [3, 2, 4], mustEndAt: loopEnd, preferOpenJaw: false }
+        ];
+      } else {
+        // DEFAULT 'diverse': Guaranteed mix of regions, leg counts (1 to 5), Open-Jaw & Round-Trip!
+        slots = [
+          { theme: 'ARG', legCounts: targetMin >= 180 ? [4, 3, 5] : [2, 3, 1], mustEndAt: baseEnd, preferOpenJaw: !mustReturnBase },
+          { theme: 'CHL', legCounts: targetMin >= 180 ? [3, 4, 2] : [1, 2], mustEndAt: baseEnd, preferOpenJaw: !mustReturnBase },
+          { theme: 'BRA_URY', legCounts: targetMin >= 180 ? [3, 4, 2] : [2, 1], mustEndAt: baseEnd, preferOpenJaw: !mustReturnBase },
+          { theme: Math.random() > 0.5 ? 'PATAGONIA' : 'NORTE', legCounts: targetMin >= 160 ? [2, 3] : [1, 2], mustEndAt: baseEnd, preferOpenJaw: !mustReturnBase },
+          { theme: 'MIX', legCounts: [2, 3], mustEndAt: mustReturnBase ? 'SADF' : origin, preferOpenJaw: false },
+          { theme: 'MIX', legCounts: [1, 4, 3, 2], mustEndAt: baseEnd, preferOpenJaw: true }
+        ];
+      }
+
+      // Execute each diversity slot within strict ±15 min window
+      for (const slot of slots) {
+        if (results.length >= 6) break;
+        const chain = searchChainForSlot({
+          origin,
+          legCounts: slot.legCounts.filter(n => n <= maxPossibleLegs && n >= 1).length > 0
+            ? slot.legCounts.filter(n => n <= maxPossibleLegs && n >= 1)
+            : [1, 2],
+          minWin: minWindow,
+          maxWin: maxWindow,
+          targetMin,
+          pool,
+          mustEndAt: slot.mustEndAt,
+          theme: slot.theme,
+          avoidDestinations,
+          preferOpenJaw: slot.preferOpenJaw
+        });
+        if (chain) {
+          registerChain(chain, slot.theme);
         }
       }
 
-      // Fallback if strict ±15m found fewer than 3 options
-      if (results.length < 3 && pool.length > 0) {
-        for (let fallback = 0; fallback < 40 && results.length < 3; fallback++) {
-          const legCount = targetMin <= 110 ? 1 : targetMin <= 220 ? 2 : 3;
-          const loose = tryBuildRotation(
-            origin,
-            legCount,
-            Math.max(20, targetMin - 35),
-            targetMin + 35,
-            targetMin,
-            pool,
-            isMedevacAc,
-            mustReturnBase
-          );
-          if (loose) {
-            const sig = loose.legs.map(l => `${l.from}-${l.to}`).join('|');
-            if (!results.some(r => r.legs.map(l => `${l.from}-${l.to}`).join('|') === sig)) {
-              results.push(loose);
-            }
-          }
+      // Second pass: fill up to 6 diverse options with MIX (strict ±15m, then slightly relaxed ±25m)
+      const fallbackThemes = shuffleArray(['ARG', 'CHL', 'BRA_URY', 'PATAGONIA', 'NORTE', 'MIX']);
+      for (let i = 0; i < 12 && results.length < 6; i++) {
+        const theme = fallbackThemes[i % fallbackThemes.length];
+        const margin = i < 6 ? 15 : 28;
+        const allowedLegs = [];
+        for (let n = 1; n <= maxPossibleLegs; n++) allowedLegs.push(n);
+        const chain = searchChainForSlot({
+          origin,
+          legCounts: allowedLegs,
+          minWin: Math.max(22, targetMin - margin),
+          maxWin: targetMin + margin,
+          targetMin,
+          pool,
+          mustEndAt: regionPref === 'roundtrip' ? (mustReturnBase ? 'SADF' : origin) : baseEnd,
+          theme: i < 6 ? theme : 'MIX',
+          avoidDestinations,
+          preferOpenJaw: !mustReturnBase && regionPref !== 'roundtrip' && i % 2 === 0
+        });
+        if (chain) {
+          registerChain(chain, i < 6 ? theme : 'MIX');
         }
       }
 
-      // Sort by closeness to user's target time
-      results.sort((a, b) => Math.abs(a.diffMin) - Math.abs(b.diffMin));
-      generatedMissions = results.slice(0, 4);
+      generatedMissions = results.slice(0, 6);
       renderDispatches();
-    }
-
-    function tryBuildRotation(origin, legCount, minWin, maxWin, targetMin, pool, isMedevacAc, mustReturnBase) {
-      if (pool.length === 0) return null;
-      const forceFerryOnly = state.missionPref === 'ferry';
-      const primaryCommercialRole = isMedevacAc ? 'MEDEVAC' : 'VIP';
-
-      if (legCount === 1) {
-        let candidates = pool;
-        if (mustReturnBase && origin !== 'SADF') {
-          candidates = pool.filter(ap => ap.icao === 'SADF');
-        }
-        const dest = pickRandom(candidates);
-        if (!dest) return null;
-
-        const role =
-          dest.icao === 'SADF' && origin !== 'SADF'
-            ? 'RETORNO A BASE'
-            : forceFerryOnly
-            ? 'FERRY'
-            : primaryCommercialRole;
-        const pax = role === 'FERRY' || role === 'RETORNO A BASE' ? 0 : isMedevacAc ? 2 : Math.floor(Math.random() * 5) + 2;
-        const leg = buildLegObject(
-          origin,
-          dest.icao,
-          role,
-          pax,
-          role === 'FERRY'
-            ? `Vuelo de traslado vacío hacia ${dest.city} para posicionamiento operativo.`
-            : role === 'RETORNO A BASE'
-            ? `Regreso directo a San Fernando (SADF) para cierre de rotación.`
-            : isMedevacAc
-            ? `Operativo sanitario urgente con equipo médico y camilla hacia ${dest.city}.`
-            : `Vuelo ejecutivo directo con ${pax} pasajeros VIP hacia ${dest.name}.`
-        );
-
-        if (leg.eetMin < minWin || leg.eetMin > maxWin) return null;
-
-        return {
-          id: 'ms_' + Math.random().toString(36).slice(2, 9),
-          title: `${AIRPORTS[origin].city} ➔ ${dest.city}`,
-          badge: role,
-          summary: leg.note,
-          legs: [leg],
-          totalMin: leg.eetMin,
-          totalNM: leg.distNM,
-          diffMin: leg.eetMin - targetMin,
-          schedule: null
-        };
-      }
-
-      if (legCount === 2) {
-        const stop1 = pickRandom(pool);
-        if (!stop1) return null;
-        const leg1Time = calcEETMin(calcDistanceNM(origin, stop1.icao));
-        const endIcao = mustReturnBase && origin !== 'SADF' ? 'SADF' : origin;
-        if (calcDistanceNM(stop1.icao, endIcao) > LJ35_MAX_RANGE_NM || stop1.icao === endIcao) return null;
-        const leg2Time = calcEETMin(calcDistanceNM(stop1.icao, endIcao));
-        const totalMin = leg1Time + TURNAROUND_MIN + leg2Time;
-
-        if (totalMin < minWin || totalMin > maxWin) return null;
-
-        // Realistic 2-leg patterns:
-        // Pattern A: Ferry to pick up PAX -> Commercial return
-        // Pattern B: Commercial outbound -> Ferry empty return to base
-        // Pattern C: Commercial round-trip (same or adjusted PAX)
-        const pattern = forceFerryOnly ? 'ALL_FERRY' : ['PICKUP_FERRY', 'DROP_FERRY', 'ROUNDTRIP'][Math.floor(Math.random() * 3)];
-        const paxMain = isMedevacAc ? 2 : Math.floor(Math.random() * 5) + 2;
-
-        let leg1, leg2, summary, badge;
-        if (pattern === 'ALL_FERRY') {
-          leg1 = buildLegObject(origin, stop1.icao, 'FERRY', 0, `Posicionamiento vacío hacia ${stop1.city}.`);
-          leg2 = buildLegObject(stop1.icao, endIcao, endIcao === 'SADF' ? 'RETORNO A BASE' : 'FERRY', 0, `Traslado vacío hacia ${AIRPORTS[endIcao].city}.`);
-          badge = 'FERRY';
-          summary = `Rotación de posicionamiento técnico vía ${stop1.city} con escala de ${TURNAROUND_MIN} min.`;
-        } else if (pattern === 'PICKUP_FERRY') {
-          leg1 = buildLegObject(origin, stop1.icao, 'FERRY', 0, `Tramo vacío para buscar a ${paxMain} pasajeros en FBO ${stop1.city}.`);
-          leg2 = buildLegObject(stop1.icao, endIcao, primaryCommercialRole, paxMain, `Embarque de ${paxMain} PAX en ${stop1.city} con destino final ${AIRPORTS[endIcao].city}.`);
-          badge = primaryCommercialRole;
-          summary = `Posicionamiento Ferry a ${stop1.city} para embarcar ${paxMain} pasajeros y regresar a ${AIRPORTS[endIcao].city}.`;
-        } else if (pattern === 'DROP_FERRY') {
-          leg1 = buildLegObject(origin, stop1.icao, primaryCommercialRole, paxMain, `Traslado de ${paxMain} PAX hacia ${stop1.city}.`);
-          leg2 = buildLegObject(stop1.icao, endIcao, endIcao === 'SADF' ? 'RETORNO A BASE' : 'FERRY', 0, `Desembarque en ${stop1.city} y regreso vacío a ${AIRPORTS[endIcao].city}.`);
-          badge = primaryCommercialRole;
-          summary = `Vuelo con ${paxMain} pasajeros hacia ${stop1.city} y retorno Ferry vacío a base.`;
-        } else {
-          const paxReturn = isMedevacAc ? 2 : Math.max(1, paxMain - (Math.random() > 0.5 ? 1 : 0));
-          leg1 = buildLegObject(origin, stop1.icao, primaryCommercialRole, paxMain, `Ida ejecutiva con ${paxMain} PAX hacia ${stop1.city}.`);
-          leg2 = buildLegObject(stop1.icao, endIcao, primaryCommercialRole, paxReturn, `Regreso con ${paxReturn} PAX tras reunión en ${stop1.city}.`);
-          badge = primaryCommercialRole;
-          summary = `Ida y vuelta en el día a ${stop1.city} con espera de ${TURNAROUND_MIN} min en plataforma.`;
-        }
-
-        return {
-          id: 'ms_' + Math.random().toString(36).slice(2, 9),
-          title: `${AIRPORTS[origin].city} ➔ ${stop1.city} ➔ ${AIRPORTS[endIcao].city}`,
-          badge,
-          summary,
-          legs: [leg1, leg2],
-          totalMin,
-          totalNM: leg1.distNM + leg2.distNM,
-          diffMin: totalMin - targetMin,
-          schedule: null
-        };
-      }
-
-      if (legCount >= 3) {
-        const stop1 = pickRandom(pool);
-        if (!stop1) return null;
-        const stop2Pool = pool.filter(ap => ap.icao !== stop1.icao && calcDistanceNM(stop1.icao, ap.icao) <= LJ35_MAX_RANGE_NM);
-        const stop2 = pickRandom(stop2Pool);
-        if (!stop2) return null;
-
-        const endIcao = mustReturnBase && origin !== 'SADF' ? 'SADF' : origin;
-        if (stop2.icao === endIcao || calcDistanceNM(stop2.icao, endIcao) > LJ35_MAX_RANGE_NM) return null;
-
-        const t1 = calcEETMin(calcDistanceNM(origin, stop1.icao));
-        const t2 = calcEETMin(calcDistanceNM(stop1.icao, stop2.icao));
-        const t3 = calcEETMin(calcDistanceNM(stop2.icao, endIcao));
-        const totalMin = t1 + t2 + t3 + TURNAROUND_MIN * 2;
-
-        if (totalMin < minWin || totalMin > maxWin) return null;
-
-        const pax1 = forceFerryOnly ? 0 : isMedevacAc ? 2 : Math.floor(Math.random() * 4) + 3;
-        const pax2 = forceFerryOnly ? 0 : isMedevacAc ? 2 : Math.max(1, pax1 - 1);
-
-        const leg1 = buildLegObject(
-          origin,
-          stop1.icao,
-          forceFerryOnly ? 'FERRY' : primaryCommercialRole,
-          pax1,
-          forceFerryOnly ? `Posicionamiento inicial hacia ${stop1.city}.` : `Primer tramo con ${pax1} PAX hacia ${stop1.city}.`
-        );
-        const leg2 = buildLegObject(
-          stop1.icao,
-          stop2.icao,
-          forceFerryOnly ? 'FERRY' : primaryCommercialRole,
-          pax2,
-          forceFerryOnly ? `Continuación Ferry hacia ${stop2.city}.` : `Escala en ${stop1.city}; continúan ${pax2} PAX hacia ${stop2.city}.`
-        );
-        const leg3 = buildLegObject(
-          stop2.icao,
-          endIcao,
-          endIcao === 'SADF' ? 'RETORNO A BASE' : 'FERRY',
-          0,
-          `Fin de servicio comercial en ${stop2.city}; retorno Ferry vacío hacia ${AIRPORTS[endIcao].city}.`
-        );
-
-        return {
-          id: 'ms_' + Math.random().toString(36).slice(2, 9),
-          title: `Triangular: ${stop1.city} • ${stop2.city}`,
-          badge: forceFerryOnly ? 'FERRY' : primaryCommercialRole,
-          summary: `Rotación multi-escala de 3 tramos (${stop1.icao} / ${stop2.icao}) con cierre vacío de regreso a ${AIRPORTS[endIcao].city}.`,
-          legs: [leg1, leg2, leg3],
-          totalMin,
-          totalNM: leg1.distNM + leg2.distNM + leg3.distNM,
-          diffMin: totalMin - targetMin,
-          schedule: null
-        };
-      }
-
-      return null;
     }
 
     function setTimePreset(hours, enableLongRange) {
@@ -1740,6 +1531,12 @@
       generateDispatches();
     }
 
+    function setRegionPref(val) {
+      state.regionPref = val;
+      saveState();
+      generateDispatches();
+    }
+
     function getBadgeStyle(badge) {
       if (badge === 'MEDEVAC') return 'bg-rose-500/15 text-rose-300 border-rose-500/35';
       if (badge === 'FERRY' || badge === 'RETORNO A BASE') return 'bg-sky-500/15 text-sky-300 border-sky-500/35';
@@ -1749,14 +1546,23 @@
 
     function renderDispatches() {
       const container = document.getElementById('dispatch-list');
+      const metaBar = document.getElementById('dispatch-meta-bar');
       const warnEl = document.getElementById('dispatch-active-warning');
       if (warnEl) warnEl.classList.toggle('hidden', !state.activeMission);
+
+      const targetMin = Math.round(state.availableHours * 60);
+      if (metaBar) {
+        metaBar.innerHTML = `
+          <span><strong class="text-white">${generatedMissions.length}</strong> órdenes disponibles desde <strong class="text-orange-400">${state.pilotLocation}</strong></span>
+          <span>Ventana objetivo: <strong class="text-emerald-400">${formatMinutes(Math.max(25, targetMin - 15))} – ${formatMinutes(targetMin + 15)}</strong> (escalas ${TURNAROUND_MIN}m incl.)</span>
+        `;
+      }
 
       if (!generatedMissions || generatedMissions.length === 0) {
         container.innerHTML = `
           <div class="col-span-full bg-efb-panel border border-efb-border rounded-2xl p-8 text-center space-y-2">
             <p class="text-sm font-bold text-white">No hay combinaciones exactas para esa ventana de tiempo</p>
-            <p class="text-xs text-slate-400">Probá mover el deslizador de tiempo o habilitá más aeropuertos en la pestaña Escenarios.</p>
+            <p class="text-xs text-slate-400">Probá cambiar la Zona a "Diverso", ajustar el tiempo o habilitar más aeropuertos en Escenarios.</p>
           </div>
         `;
         return;
@@ -1767,22 +1573,28 @@
           const diffLabel =
             m.diffMin === 0 ? 'Exacto' : m.diffMin > 0 ? `+${m.diffMin}m vs obj` : `${m.diffMin}m vs obj`;
           const firstLeg = m.legs[0];
+          const lastDest = m.legs[m.legs.length - 1].to;
+          const routeChain = [firstLeg.from, ...m.legs.map(l => l.to)].join(' ➔ ');
           const sbUrl = buildSimBriefUrl(firstLeg, state.activeReg, '');
+          const endBadge = m.isOpenJaw
+            ? `<span class="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/30 text-amber-300">Pernocta ${lastDest}</span>`
+            : `<span class="text-[10px] font-mono px-2 py-0.5 rounded bg-efb-bg border border-efb-border text-slate-300">Cierre ${lastDest}</span>`;
 
           const legsHtml = m.legs
             .map((leg, idx) => {
               const destAp = AIRPORTS[leg.to];
               return `
-                <div class="bg-efb-bg/90 border border-efb-border/90 rounded-xl p-3 space-y-1.5">
+                <div class="bg-efb-bg/90 border border-efb-border/90 rounded-xl p-2.5 space-y-1">
                   <div class="flex items-center justify-between gap-2">
-                    <div class="flex items-center gap-2 font-mono text-xs">
+                    <div class="flex items-center gap-1.5 font-mono text-xs flex-wrap">
                       <span class="text-slate-500">#${idx + 1}</span>
                       <strong class="text-white">${leg.from}</strong>
                       <span class="text-orange-400">➔</span>
                       <strong class="text-white">${leg.to}</strong>
+                      <span class="text-[10px] text-slate-400 hidden sm:inline">(${destAp.country})</span>
                       <span class="text-[10px] px-1.5 py-0.5 rounded border ${getBadgeStyle(leg.role)}">${leg.role}</span>
                     </div>
-                    <span class="font-mono text-[11px] text-slate-300">${formatMinutes(leg.eetMin)} • ${leg.distNM} NM</span>
+                    <span class="font-mono text-[11px] text-slate-300 shrink-0">${formatMinutes(leg.eetMin)} • ${leg.distNM} NM</span>
                   </div>
                   <p class="text-[11px] text-slate-400 leading-snug">${leg.note}</p>
                   <div class="flex flex-wrap items-center justify-between gap-2 text-[10px] font-mono text-slate-400 pt-1 border-t border-efb-border/60">
@@ -1795,12 +1607,14 @@
             .join('');
 
           return `
-            <article class="bg-efb-panel border border-efb-border hover:border-slate-700 rounded-2xl p-4 sm:p-5 flex flex-col justify-between gap-4 transition">
+            <article class="bg-efb-panel border border-efb-border hover:border-slate-700 rounded-2xl p-4 sm:p-5 flex flex-col justify-between gap-3.5 transition">
               <div class="space-y-3">
                 <div class="flex items-start justify-between gap-2">
                   <div class="flex flex-wrap items-center gap-1.5">
                     <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded border ${getBadgeStyle(m.badge)}">${m.badge}</span>
+                    ${m.regionTag ? `<span class="text-[10px] font-mono font-semibold px-2 py-0.5 rounded border ${m.regionColor}">${m.regionTag}</span>` : ''}
                     <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-efb-bg border border-efb-border text-slate-300">${m.legs.length} ${m.legs.length === 1 ? 'tramo' : 'tramos'}</span>
+                    ${endBadge}
                     <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/25 text-emerald-300">${diffLabel}</span>
                   </div>
                   <div class="text-right font-mono shrink-0">
@@ -1811,10 +1625,11 @@
 
                 <div>
                   <h3 class="text-base font-bold text-white">${m.title}</h3>
-                  <p class="text-xs text-slate-400 mt-0.5 leading-relaxed">${m.summary}</p>
+                  <p class="font-mono text-[11px] text-orange-300/90 mt-0.5 break-words">${routeChain}</p>
+                  <p class="text-xs text-slate-400 mt-1 leading-relaxed">${m.summary}</p>
                 </div>
 
-                <div class="space-y-2">${legsHtml}</div>
+                <div class="space-y-1.5">${legsHtml}</div>
 
                 <details class="bg-efb-bg/60 border border-efb-border rounded-xl px-3 py-2 text-xs">
                   <summary class="cursor-pointer font-semibold text-slate-300 select-none">Detalles Técnicos LJ35A (Tanques, V-Speeds & Ruta ATS)</summary>
@@ -2725,9 +2540,11 @@
       const slider = document.getElementById('time-slider');
       const lr = document.getElementById('toggle-longrange');
       const pref = document.getElementById('mission-pref');
+      const regPref = document.getElementById('region-pref');
       if (slider) slider.value = String(state.availableHours);
       if (lr) lr.checked = Boolean(state.longRangeMode);
       if (pref) pref.value = state.missionPref || 'auto';
+      if (regPref) regPref.value = state.regionPref || 'diverse';
       updateTimeDisplay(state.availableHours, true);
     }
 
